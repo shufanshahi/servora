@@ -42,6 +42,12 @@ const schema = z.object({
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
+/** Every environment variable the API reads (used to keep the docs in step). */
+export const CONFIG_KEYS = Object.keys(schema.shape);
+
+/** Prefix of the public example secret in .env.example. Never acceptable in production. */
+export const PLACEHOLDER_SECRET_PREFIX = 'dev-only-';
+
 export type Config = Readonly<z.infer<typeof schema>>;
 
 export class ConfigError extends Error {
@@ -53,7 +59,20 @@ export class ConfigError extends Error {
 
 /** Parses and validates environment variables. Throws ConfigError with a readable message. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const result = schema.safeParse(env);
+  const result = schema
+    .superRefine((value, ctx) => {
+      if (
+        value.NODE_ENV === 'production' &&
+        value.JWT_SECRET.startsWith(PLACEHOLDER_SECRET_PREFIX)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['JWT_SECRET'],
+          message: 'JWT_SECRET is the public development placeholder; set a real random secret',
+        });
+      }
+    })
+    .safeParse(env);
   if (!result.success) {
     const lines = result.error.issues.map(
       (issue) => `  - ${issue.path.join('.')}: ${issue.message}`,

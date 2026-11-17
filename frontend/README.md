@@ -51,6 +51,28 @@ dart run tool/check_api.dart http://192.168.1.20:3000
 (`10.0.2.2` only resolves inside the Android emulator, so on your computer use `localhost`
 or the LAN address.)
 
+## How sign-in works
+
+- **One source of truth.** `core/session/` owns who is signed in (`SessionNotifier`: unknown,
+  authenticated, or unauthenticated). The router redirect and the API client both read it, so
+  they can never disagree.
+- **Persistent session.** After login or registration the token, its expiry and the user are saved
+  with `flutter_secure_storage` (Android Keystore-backed), never in plain preferences. On launch the
+  app reads them, shows a splash screen briefly, then goes straight to Home, or to the sign-in
+  screen if nothing valid is saved.
+- **Expiry.** A saved token that has expired is deleted on launch and the sign-in screen explains
+  "Your session has expired". If the server rejects a token that a request carried (HTTP 401) the
+  session is cleared and the user is returned to sign-in with the same message. A *failed login*
+  (wrong password) never signs anyone out: it carries no token.
+- **Logout** removes the token and cached user from the device and replaces the navigation stack,
+  so Back cannot return to a signed-in screen.
+- **Forms** validate with the same rules and wording as the API (`AuthValidators`), show server
+  messages on the right field (for example "An account with this email already exists" under
+  Email), block double submits, and keep what was typed when a request fails or the device is
+  offline.
+- **No refresh token** (see the trade-off in [../backend/README.md](../backend/README.md)): a token
+  lasts 7 days, and the user simply signs in again after that.
+
 ## Tests and checks
 
 ```bash
@@ -79,6 +101,7 @@ lib/
   core/
     config/    AppConfig (API_BASE_URL)
     network/   dio client, envelope parsing, failure mapping
+    session/   who is signed in: session state, secure token store
     error/     AppFailure: the one error type the UI sees
     router/    go_router, bottom-navigation shell, auth redirect
     theme/     colours, spacing, ThemeData

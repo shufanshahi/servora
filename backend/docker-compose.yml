@@ -26,9 +26,18 @@ services:
       db:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      # This compose file is for local use, so it defaults to development mode (which
+      # allows the example secret). A real deployment sets NODE_ENV=production and its own
+      # JWT_SECRET.
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: '3000'
       DATABASE_URL: postgres://${POSTGRES_USER:-servora}:${POSTGRES_PASSWORD:-servora}@db:5432/${POSTGRES_DB:-servora}
+      # Required. Put it in backend/.env (copy .env.example) or export it.
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET - copy backend/.env.example to backend/.env}
+      JWT_EXPIRES_IN_SECONDS: ${JWT_EXPIRES_IN_SECONDS:-604800}
+      BCRYPT_COST: ${BCRYPT_COST:-12}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-900}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
     ports:

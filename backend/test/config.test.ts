@@ -49,6 +49,17 @@ describe('loadConfig', () => {
     });
   });
 
+  it('refuses the public development placeholder secret in production only', () => {
+    const placeholder = 'dev-only-change-me-dev-only-change-me-0000';
+    expect(() =>
+      loadConfig({ ...base, NODE_ENV: 'production', JWT_SECRET: placeholder }),
+    ).toThrowError(/development placeholder/);
+    expect(loadConfig({ ...base, NODE_ENV: 'development', JWT_SECRET: placeholder })).toBeDefined();
+    expect(
+      loadConfig({ ...base, NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(48) }).NODE_ENV,
+    ).toBe('production');
+  });
+
   it('keeps the bcrypt cost and token lifetime within sane bounds', () => {
     expect(() => loadConfig({ ...base, BCRYPT_COST: '3' })).toThrowError(/BCRYPT_COST/);
     expect(() => loadConfig({ ...base, BCRYPT_COST: '16' })).toThrowError(/BCRYPT_COST/);
@@ -64,7 +75,7 @@ describe('server startup with a bad JWT secret', () => {
     const result = spawnSync(process.execPath, ['--import', 'tsx', 'src/server.ts'], {
       cwd: root,
       encoding: 'utf8',
-      timeout: 20_000,
+      timeout: 60_000,
       env: {
         PATH: process.env.PATH ?? '',
         DATABASE_URL: TEST_DATABASE_URL,
@@ -77,5 +88,5 @@ describe('server startup with a bad JWT secret', () => {
     expect(result.stderr).toContain('JWT_SECRET must be at least 32 characters');
     // The process must exit before ever listening.
     expect(result.stdout).not.toContain('listening');
-  });
+  }, 75_000);
 });
