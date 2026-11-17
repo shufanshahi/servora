@@ -20,22 +20,6 @@ class SplashPage extends StatelessWidget {
       const Scaffold(body: LoadingView(message: 'Starting Servora'));
 }
 
-/// Stand-in for the sign-in screen until it is built in the authentication change.
-class LoginPlaceholderPage extends StatelessWidget {
-  const LoginPlaceholderPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: EmptyView(
-        title: 'Servora',
-        message: 'Sign in screen coming soon',
-        icon: Icons.lock_outline,
-      ),
-    );
-  }
-}
-
 /// Home placeholder: a long adaptive grid so scroll preservation can be tested.
 class HomePlaceholderPage extends StatelessWidget {
   const HomePlaceholderPage({super.key, this.controller});

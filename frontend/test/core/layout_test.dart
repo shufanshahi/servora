@@ -43,12 +43,12 @@ void main() {
       await visitAllTabs(tester);
     });
 
-    testWidgets('the signed-out screen fits at 2x text scale', (tester) async {
+    testWidgets('the sign-in screen fits at 2x text scale', (tester) async {
       useScreen(tester, width: 320, height: 640, textScale: 2.0);
       await tester.pumpWidget(servoraApp());
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      final rect = tester.getRect(find.text('Sign in screen coming soon'));
+      final rect = tester.getRect(find.text('Welcome back'));
       expect(rect.left, greaterThanOrEqualTo(0));
       expect(rect.right, lessThanOrEqualTo(320));
     });

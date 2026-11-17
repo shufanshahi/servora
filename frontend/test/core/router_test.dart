@@ -56,7 +56,7 @@ void main() {
     ) async {
       await tester.pumpWidget(servoraApp());
       await tester.pumpAndSettle();
-      expect(find.text('Sign in screen coming soon'), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
     });
 
