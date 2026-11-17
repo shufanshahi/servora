@@ -67,18 +67,9 @@ flutter build apk --release --dart-define=API_BASE_URL=https://<your-host>
 # -> build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Or with only Docker (no Flutter or Android SDK needed; the first run downloads the toolchain,
-several GB, and is slow):
-
-```bash
-cd frontend
-docker compose --profile apk run --rm apk-builder
-API_BASE_URL=https://<your-host> docker compose --profile apk run --rm apk-builder
-# -> out/app-release.apk
-```
-
-The same command works from the repository root. The builder is opt-in: a plain
-`docker compose up` never starts it.
+The first build downloads Gradle and the Android dependencies and can take a long time; later
+builds are much faster. Install the APK on a device or emulator with
+`adb install -r build/app/outputs/flutter-apk/app-release.apk`.
 
 ## Project layout
 

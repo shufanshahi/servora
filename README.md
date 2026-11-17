@@ -6,10 +6,11 @@ manage their bookings, and ask an AI assistant for help.
 | Folder | What it is | Docs |
 |---|---|---|
 | [`backend/`](backend) | Node.js + Express + PostgreSQL REST API | [backend/README.md](backend/README.md) |
-| `frontend/` | Flutter app (added in a later step) | `frontend/README.md` |
+| [`frontend/`](frontend) | Flutter app | [frontend/README.md](frontend/README.md) |
 
-Each folder has its own README and Docker files and can be run on its own, or you can
-run everything together from this folder.
+Each folder has its own README. The backend also has Docker files, so you can run it on its own
+from `backend/` or from this folder. The Flutter app is built and run with the Flutter toolchain
+(see its README).
 
 ## Prerequisites
 
@@ -26,24 +27,24 @@ curl http://localhost:3000/health
 docker compose down              # stop (add -v to also delete the database volume)
 ```
 
-The root `docker-compose.yml` simply `include`s the compose file of each folder, so there is
-one definition of every service and nothing to keep in sync.
+The root `docker-compose.yml` simply `include`s the backend's compose file, so there is one
+definition of every service and nothing to keep in sync.
 
 | Service | Host port | Notes |
 |---|---|---|
 | API | `3000` | Override with `API_HOST_PORT` |
 | PostgreSQL | `5433` | Override with `DB_HOST_PORT`; 5433 avoids clashing with a local PostgreSQL on 5432 |
 
-## Run a folder on its own
+## Run the backend on its own
 
 ```bash
 cd backend
-docker compose up --build        # same stack, scoped to the backend folder
+docker compose up --build        # same stack, started from the backend folder
 ```
 
 See [backend/README.md](backend/README.md) for running the API with `npm run dev`, tests,
-migrations and configuration. The `frontend/` folder will document its own run and APK
-build commands once it exists.
+migrations and configuration, and [frontend/README.md](frontend/README.md) for running the app
+and building the APK.
 
 ## Configuration
 

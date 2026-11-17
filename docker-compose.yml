@@ -1,8 +1,6 @@
-# Root compose: runs the whole Servora system.
-# Each folder also has its own compose file and can be run on its own.
+# Root compose: runs the Servora backend (PostgreSQL + API).
+# The same stack can be started from inside backend/ with the same command.
 #
-#   docker compose up --build                      # database + API
-#   docker compose --profile apk run --rm apk-builder   # build the Android APK
+#   docker compose up --build
 include:
   - backend/docker-compose.yml
-  - frontend/docker-compose.yml
