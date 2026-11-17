@@ -19,3 +19,15 @@ String formatDuration(int minutes) {
   final rest = minutes % 60;
   return rest == 0 ? '$hours h' : '$hours h $rest min';
 }
+
+/// `Mon, 6 May 2030` for a moment, in the device's time zone.
+String formatDate(DateTime moment) =>
+    DateFormat('EEE, d MMM y', 'en_US').format(moment.toLocal());
+
+/// `10:00 AM` for a moment, in the device's time zone.
+String formatTime(DateTime moment) =>
+    DateFormat('h:mm a', 'en_US').format(moment.toLocal());
+
+/// `10:00 AM - 11:00 AM`, in the device's time zone.
+String formatTimeRange(DateTime start, DateTime end) =>
+    '${formatTime(start)} - ${formatTime(end)}';

@@ -31,11 +31,14 @@ class StatusBadge extends StatelessWidget {
           children: [
             Icon(style.icon, size: 14, color: style.colors.foreground),
             const SizedBox(width: AppSpacing.xs),
-            Text(
-              status.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: style.colors.foreground,
-                fontWeight: FontWeight.w600,
+            // Flexible, so with very large text the label wraps instead of overflowing.
+            Flexible(
+              child: Text(
+                status.label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: style.colors.foreground,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

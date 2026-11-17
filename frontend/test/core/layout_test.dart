@@ -88,7 +88,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('My Bookings'));
       await tester.pumpAndSettle();
-      final box = tester.getRect(find.text('No bookings yet'));
+      final box = tester.getRect(find.text('No upcoming bookings'));
       // Centered inside the max content column, not stretched across 1280 dp.
       expect(box.width, lessThan(Breakpoints.maxContentWidth));
       expect(box.center.dx, closeTo(640, 2));

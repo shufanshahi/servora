@@ -7,7 +7,11 @@ import 'package:servora/core/router/placeholder_pages.dart';
 import 'package:servora/core/router/routes.dart';
 import 'package:servora/features/auth/presentation/login_screen.dart';
 import 'package:servora/features/auth/presentation/register_screen.dart';
-import 'package:servora/features/booking/presentation/booking_placeholder_screen.dart';
+import 'package:servora/features/booking/domain/appointment.dart';
+import 'package:servora/features/booking/presentation/booking_confirmation_screen.dart';
+import 'package:servora/features/booking/presentation/booking_detail_screen.dart';
+import 'package:servora/features/booking/presentation/booking_screen.dart';
+import 'package:servora/features/booking/presentation/my_bookings_screen.dart';
 import 'package:servora/features/services/domain/service.dart';
 import 'package:servora/features/services/presentation/home_screen.dart';
 import 'package:servora/features/services/presentation/service_detail_screen.dart';
@@ -59,11 +63,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'book',
-            builder: (_, state) => BookingPlaceholderScreen(
-              serviceId: state.pathParameters['id']!,
-            ),
+            builder: (_, state) =>
+                BookingScreen(serviceId: state.pathParameters['id']!),
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.bookingConfirmation,
+        // Without the appointment (a stale link) there is nothing to confirm.
+        redirect: (_, state) =>
+            state.extra is Appointment ? null : AppRoutes.bookings,
+        builder: (_, state) =>
+            BookingConfirmationScreen(appointment: state.extra! as Appointment),
+      ),
+      GoRoute(
+        path: '/bookings/:id',
+        builder: (_, state) => BookingDetailScreen(
+          appointmentId: state.pathParameters['id']!,
+          initial: state.extra is Appointment
+              ? state.extra! as Appointment
+              : null,
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -81,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.bookings,
-                builder: (_, _) => const BookingsPlaceholderPage(),
+                builder: (_, _) => const MyBookingsScreen(),
               ),
             ],
           ),

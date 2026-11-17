@@ -80,7 +80,7 @@ void main() {
 
       await tester.tap(find.text('My Bookings'));
       await tester.pumpAndSettle();
-      expect(find.text('No bookings yet'), findsOneWidget);
+      expect(find.text('No upcoming bookings'), findsOneWidget);
 
       await tester.tap(find.text('Assistant'));
       await tester.pumpAndSettle();
@@ -113,7 +113,7 @@ void main() {
 
       await tester.tap(find.text('My Bookings'));
       await tester.pumpAndSettle();
-      expect(find.text('No bookings yet'), findsOneWidget);
+      expect(find.text('No upcoming bookings'), findsOneWidget);
 
       await tester.tap(navTab('Home'));
       await tester.pumpAndSettle();

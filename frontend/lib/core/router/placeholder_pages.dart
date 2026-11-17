@@ -19,19 +19,6 @@ class SplashPage extends StatelessWidget {
       const Scaffold(body: LoadingView(message: 'Starting Servora'));
 }
 
-class BookingsPlaceholderPage extends StatelessWidget {
-  const BookingsPlaceholderPage({super.key});
-
-  @override
-  Widget build(BuildContext context) => const MaxContentWidth(
-    child: EmptyView(
-      title: 'No bookings yet',
-      message: 'Your upcoming and previous bookings will appear here.',
-      icon: Icons.calendar_month_outlined,
-    ),
-  );
-}
-
 class AssistantPlaceholderPage extends StatelessWidget {
   const AssistantPlaceholderPage({super.key});
 

@@ -13,6 +13,12 @@ abstract final class AppRoutes {
   static String serviceDetail(String id) => '/services/$id';
   static String serviceBook(String id) => '/services/$id/book';
 
+  /// Shown after a successful booking. Needs the new appointment as `extra`.
+  static const bookingConfirmation = '/booking-confirmation';
+
+  /// One booking's detail page.
+  static String bookingDetail(String id) => '/bookings/$id';
+
   /// Routes a signed-out user may open.
   static const publicRoutes = {splash, login, register};
 }

@@ -10,7 +10,7 @@ import 'package:servora/core/router/auth_status.dart';
 import 'package:servora/core/router/routes.dart';
 import 'package:servora/core/widgets/error_view.dart';
 import 'package:servora/core/widgets/loading_view.dart';
-import 'package:servora/features/booking/presentation/booking_placeholder_screen.dart';
+import 'package:servora/features/booking/presentation/booking_screen.dart';
 import 'package:servora/features/services/domain/service.dart';
 import 'package:servora/features/services/presentation/service_detail_screen.dart';
 import 'package:servora/features/services/presentation/widgets/service_card.dart';
@@ -413,7 +413,7 @@ void main() {
         expect(tester.getRect(bookButton).right, lessThanOrEqualTo(320));
         await tester.tap(bookButton);
         await tester.pumpAndSettle();
-        expect(find.byType(BookingPlaceholderScreen), findsOneWidget);
+        expect(find.byType(BookingScreen), findsOneWidget);
       },
     );
 
@@ -458,16 +458,12 @@ void main() {
       await tester.tap(bookButton);
       await tester.pumpAndSettle();
 
-      expect(find.byType(BookingPlaceholderScreen), findsOneWidget);
+      expect(find.byType(BookingScreen), findsOneWidget);
       expect(
-        tester
-            .widget<BookingPlaceholderScreen>(
-              find.byType(BookingPlaceholderScreen),
-            )
-            .serviceId,
+        tester.widget<BookingScreen>(find.byType(BookingScreen)).serviceId,
         swedish.id,
       );
-      expect(find.text('Booking: Swedish Massage'), findsOneWidget);
+      expect(find.text('Swedish Massage'), findsOneWidget);
     });
 
     testWidgets('carries the right id for a different service too', (
@@ -478,14 +474,10 @@ void main() {
       await tester.tap(bookButton);
       await tester.pumpAndSettle();
       expect(
-        tester
-            .widget<BookingPlaceholderScreen>(
-              find.byType(BookingPlaceholderScreen),
-            )
-            .serviceId,
+        tester.widget<BookingScreen>(find.byType(BookingScreen)).serviceId,
         haircut.id,
       );
-      expect(find.text('Booking: Haircut & Styling'), findsOneWidget);
+      expect(find.text('Haircut & Styling'), findsOneWidget);
       expect(repo.getCalls, contains(haircut.id));
     });
 
@@ -500,7 +492,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(ServiceDetailScreen), findsOneWidget);
-      expect(find.byType(BookingPlaceholderScreen), findsNothing);
+      expect(find.byType(BookingScreen), findsNothing);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -515,7 +507,7 @@ void main() {
             .read(routerProvider)
             .go(AppRoutes.serviceBook('some-id'));
         await tester.pumpAndSettle();
-        expect(find.byType(BookingPlaceholderScreen), findsNothing);
+        expect(find.byType(BookingScreen), findsNothing);
         expect(find.text('Welcome back'), findsOneWidget);
       },
     );

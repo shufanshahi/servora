@@ -1,0 +1,20 @@
+{
+    "success": true,
+    "data": {
+        "id": "c27d2357-92ec-4f2c-be61-ffb3b5aa0b66",
+        "service": {
+            "id": "daf7c3b4-699b-411c-b3c3-e0b9539d149d",
+            "name": "Swedish Massage",
+            "category": "Wellness",
+            "durationMinutes": 60,
+            "imageUrl": "http://localhost:3000/images/services/swedish-massage.jpg"
+        },
+        "startsAt": "2026-11-22T10:00:00.000Z",
+        "endsAt": "2026-11-22T11:00:00.000Z",
+        "status": "PENDING",
+        "price": 65,
+        "note": "Please use unscented oil",
+        "createdAt": "2026-11-17T13:52:14.481Z",
+        "cancelledAt": null
+    }
+}

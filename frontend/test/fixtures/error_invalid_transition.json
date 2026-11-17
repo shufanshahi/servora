@@ -1,0 +1,7 @@
+{
+    "success": false,
+    "error": {
+        "code": "INVALID_STATUS_TRANSITION",
+        "message": "A cancelled appointment cannot be cancelled; only pending ones can"
+    }
+}
