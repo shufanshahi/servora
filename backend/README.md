@@ -60,7 +60,7 @@ compose file is for local use; a real deployment sets `NODE_ENV=production` and 
 
 The API image is multi-stage, runs as a non-root user, and contains no secrets: configuration
 arrives only through environment variables. The same stack also starts from the repository
-root (`docker compose up --build` there).
+root (`docker compose up -d --build --wait` there).
 
 ## Tests
 
