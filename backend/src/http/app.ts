@@ -5,7 +5,7 @@ import type { Config } from '../config';
 import type { Db } from '../db/pool';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { requestLogger, type LogSink } from './middleware/request-logger';
-import { routes } from './routes';
+import { createRoutes } from './routes';
 
 export interface AppDeps {
   config: Config;
@@ -41,7 +41,7 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
-  app.use(routes);
+  app.use(createRoutes({ config, db: deps.db }));
   deps.extraRoutes?.(app);
 
   app.use(notFoundHandler);

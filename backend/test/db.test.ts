@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createTestDb } from './support/db';
-import { TEST_DATABASE_URL } from './support/env';
+import { TEST_DATABASE_URL, TEST_JWT_SECRET } from './support/env';
 
 const db = createTestDb();
 afterAll(() => db.close());
@@ -27,7 +27,13 @@ describe('server process', () => {
     const port = String(41000 + Math.floor(Math.random() * 1000));
     const child = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], {
       cwd: root,
-      env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL, PORT: port, NODE_ENV: 'test' },
+      env: {
+        ...process.env,
+        DATABASE_URL: TEST_DATABASE_URL,
+        JWT_SECRET: TEST_JWT_SECRET,
+        PORT: port,
+        NODE_ENV: 'test',
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 

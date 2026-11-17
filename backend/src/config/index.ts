@@ -17,6 +17,26 @@ const schema = z.object({
         .filter(Boolean),
     ),
   PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
+  // Secret used to sign access tokens. Must be long and random; generate one with
+  //   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+  JWT_SECRET: z
+    .string({ error: 'JWT_SECRET is required (at least 32 characters)' })
+    .min(32, 'JWT_SECRET must be at least 32 characters'),
+  // Access token lifetime in seconds (default 7 days).
+  JWT_EXPIRES_IN_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .default(7 * 24 * 60 * 60),
+  // bcrypt work factor. 12 is a good default; tests lower it for speed.
+  BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
+  // Failed-attempt protection on register and login, per client IP.
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(15 * 60),
   // Number of reverse proxies in front of the API (0 locally, 1 on most hosts). Needed so
   // rate limiting sees the real client IP instead of the proxy's.
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),

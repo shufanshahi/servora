@@ -13,6 +13,8 @@ export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  EMAIL_TAKEN: 'EMAIL_TAKEN',
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
 } as const;
 
 export interface FieldError {
@@ -54,3 +56,14 @@ export const validationError = (details: FieldError[], message = 'Validation fai
 
 export const rateLimited = (message = 'Too many requests, please try again later'): AppError =>
   new AppError(429, ERROR_CODES.RATE_LIMITED, message);
+
+/** Registration with an email that already has an account (409). */
+export const emailTaken = (): AppError =>
+  conflict(ERROR_CODES.EMAIL_TAKEN, 'An account with this email already exists');
+
+/**
+ * Wrong email or wrong password (401). Both cases use this one message so a caller
+ * cannot tell which emails are registered.
+ */
+export const invalidCredentials = (): AppError =>
+  new AppError(401, ERROR_CODES.INVALID_CREDENTIALS, 'Incorrect email or password');

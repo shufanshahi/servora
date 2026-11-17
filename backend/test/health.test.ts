@@ -1,15 +1,8 @@
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
-import { loadConfig } from '../src/config';
-import { createApp } from '../src/http/app';
-import { TEST_DATABASE_URL } from './support/env';
-import { createTestDb } from './support/db';
+import { buildTestApp } from './support/app';
 
-const db = createTestDb();
-const app = createApp({
-  config: loadConfig({ DATABASE_URL: TEST_DATABASE_URL, NODE_ENV: 'test' }),
-  db,
-});
+const { app, db } = buildTestApp();
 
 afterAll(() => db.close());
 

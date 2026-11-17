@@ -115,6 +115,8 @@ Passwords, tokens and request bodies are never written to logs.
 | `VALIDATION_ERROR` | 422 | Input failed validation; see `error.details` per field |
 | `RATE_LIMITED` | 429 | Too many requests from this client |
 | `INTERNAL_ERROR` | 500 | Unexpected server fault; details are only in server logs |
+| `EMAIL_TAKEN` | 409 | Registration with an email that already has an account (compared case-insensitively) |
+| `INVALID_CREDENTIALS` | 401 | Wrong email or password; identical for both so registered emails are not revealed |
 <!-- error-codes:end -->
 
 Later features add their own codes (for example `EMAIL_TAKEN`, `SLOT_UNAVAILABLE`) to
