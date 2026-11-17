@@ -1,5 +1,5 @@
-# Backend stack: PostgreSQL (and, once added, the API).
-# Run on its own from this folder:  docker compose up -d
+# Backend stack: PostgreSQL and the API.
+# Run on its own from this folder:  docker compose up --build
 services:
   db:
     image: postgres:17-alpine
@@ -18,6 +18,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgres://${POSTGRES_USER:-servora}:${POSTGRES_PASSWORD:-servora}@db:5432/${POSTGRES_DB:-servora}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+    ports:
+      - '${API_HOST_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health >/dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
 volumes:
   servora_pgdata:

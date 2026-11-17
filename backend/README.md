@@ -42,6 +42,26 @@ npm run migrate:create <name># create a new SQL migration file
 Migrations enable the `citext` and `btree_gist` extensions. The test suite uses its own
 `servora_test` database, creates it on demand and applies the migrations before running.
 
+### Run the whole backend in Docker
+
+```bash
+docker compose up --build    # PostgreSQL + API on http://localhost:3000, migrations applied on start
+docker compose down          # stop (add -v to delete the database volume)
+```
+
+The API image is multi-stage, runs as a non-root user, and contains no secrets: configuration
+arrives only through environment variables. The same stack also starts from the repository
+root (`docker compose up --build` there).
+
+## Tests
+
+The suite needs PostgreSQL running (`docker compose up -d --wait db`). It creates and migrates
+its own `servora_test` database, so your development data is never touched.
+
+```bash
+npm test
+```
+
 ## Check it works
 
 ```bash
