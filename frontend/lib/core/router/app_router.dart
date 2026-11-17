@@ -7,7 +7,10 @@ import 'package:servora/core/router/placeholder_pages.dart';
 import 'package:servora/core/router/routes.dart';
 import 'package:servora/features/auth/presentation/login_screen.dart';
 import 'package:servora/features/auth/presentation/register_screen.dart';
+import 'package:servora/features/booking/presentation/booking_placeholder_screen.dart';
+import 'package:servora/features/services/domain/service.dart';
 import 'package:servora/features/services/presentation/home_screen.dart';
+import 'package:servora/features/services/presentation/service_detail_screen.dart';
 
 /// Decides where a user may go. Pure function so it can be unit tested.
 ///
@@ -44,6 +47,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.register,
         builder: (_, _) => const RegisterScreen(),
+      ),
+      // Pushed above the tab bar, so Back returns to wherever the user was.
+      GoRoute(
+        path: '/services/:id',
+        builder: (_, state) => ServiceDetailScreen(
+          serviceId: state.pathParameters['id']!,
+          // The tapped list item, so the page can show at once (null for a direct link).
+          initial: state.extra is Service ? state.extra! as Service : null,
+        ),
+        routes: [
+          GoRoute(
+            path: 'book',
+            builder: (_, state) => BookingPlaceholderScreen(
+              serviceId: state.pathParameters['id']!,
+            ),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

@@ -19,15 +19,22 @@ class MaxContentWidth extends StatelessWidget {
     required this.child,
     super.key,
     this.maxWidth = Breakpoints.maxContentWidth,
+    this.fillHeight = true,
   });
 
   final Widget child;
   final double maxWidth;
 
+  /// Whether to take all the height on offer (right for a page body) or only as much as
+  /// the child needs (right for a bar placed above or below other content, which would
+  /// otherwise push that content off the screen).
+  final bool fillHeight;
+
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.topCenter,
+      heightFactor: fillHeight ? null : 1,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: child,
