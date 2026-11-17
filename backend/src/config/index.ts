@@ -17,6 +17,9 @@ const schema = z.object({
         .filter(Boolean),
     ),
   PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
+  // Number of reverse proxies in front of the API (0 locally, 1 on most hosts). Needed so
+  // rate limiting sees the real client IP instead of the proxy's.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 export type Config = Readonly<z.infer<typeof schema>>;

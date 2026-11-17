@@ -62,7 +62,43 @@ message if a required value is missing. See [`.env.example`](.env.example).
 | `NODE_ENV` | no | `development` | `development`, `test` or `production` |
 | `CORS_ORIGINS` | no | empty | Comma-separated allowed browser origins |
 | `PUBLIC_BASE_URL` | no | `http://localhost:3000` | Base for absolute URLs (images) |
+| `TRUST_PROXY` | no | `0` | Number of reverse proxies in front of the API (use `1` on most hosts) |
 | `TEST_DATABASE_URL` | no | `...:5433/servora_test` | Test database (tests only) |
+
+## API conventions
+
+Every response is JSON in one of two envelopes.
+
+```jsonc
+// success (list responses also carry pagination meta)
+{ "success": true, "data": { ... }, "meta": { "page": 1, "limit": 20, "total": 42 } }
+
+// failure
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "Validation failed",
+  "details": [{ "field": "email", "message": "Invalid email address" }] } }
+```
+
+Requests are validated before any business logic runs; unknown fields are dropped.
+Passwords, tokens and request bodies are never written to logs.
+
+### Error codes
+
+<!-- error-codes:start -->
+| Code | HTTP status | Meaning |
+|---|---|---|
+| `BAD_REQUEST` | 400 | Malformed request, for example a body that is not valid JSON |
+| `UNAUTHENTICATED` | 401 | Missing, invalid or expired credentials |
+| `FORBIDDEN` | 403 | Authenticated but not allowed to perform the action |
+| `NOT_FOUND` | 404 | Unknown route or resource (also used for resources owned by someone else) |
+| `CONFLICT` | 409 | Generic state conflict; domain conflicts use their own codes |
+| `PAYLOAD_TOO_LARGE` | 413 | Request body exceeds the 100 KB limit |
+| `VALIDATION_ERROR` | 422 | Input failed validation; see `error.details` per field |
+| `RATE_LIMITED` | 429 | Too many requests from this client |
+| `INTERNAL_ERROR` | 500 | Unexpected server fault; details are only in server logs |
+<!-- error-codes:end -->
+
+Later features add their own codes (for example `EMAIL_TAKEN`, `SLOT_UNAVAILABLE`) to
+this table; a test fails if the table and `src/http/errors.ts` ever disagree.
 
 ## Layout
 
