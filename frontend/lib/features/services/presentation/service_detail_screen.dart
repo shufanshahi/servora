@@ -77,7 +77,11 @@ class _Content extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Chip(label: Text(service.category)),
+        // Left-aligned like the rest of the page (a bare Chip would centre itself).
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Chip(label: Text(service.category)),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Semantics(
           header: true,

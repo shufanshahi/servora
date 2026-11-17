@@ -162,7 +162,8 @@ there, but the demo user is skipped unless you set `SEED_ALLOW_PRODUCTION=true`.
   `/images/services/<name>.jpg`. Only the relative path is stored in the database
   (`services.image_path`); the absolute `imageUrl` in responses is built from `PUBLIC_BASE_URL`.
   **When you host the API, set `PUBLIC_BASE_URL` to its public address** or clients will be given
-  `localhost` links.
+  `localhost` links. For the Android emulator use `http://10.0.2.2:3000` (the emulator's name for
+  your computer), and for a physical phone your computer's LAN address.
 - They are small on purpose: 800 x 600 JPEG, under 150 KB each, so the repository stays light.
 - Every image is a photograph from [Wikimedia Commons](https://commons.wikimedia.org/) used under
   its licence. Authors, licences and links to the original files are in
