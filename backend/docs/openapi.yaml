@@ -15,6 +15,8 @@ tags:
   - name: Health
   - name: Auth
     description: Registration and login. Both are rate limited per client IP.
+  - name: Profile
+    description: The signed-in user's own account. A token is required.
   - name: Services
     description: The public service catalogue. No token needed.
   - name: Appointments
@@ -74,6 +76,7 @@ paths:
                     id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
                     name: Ada Lovelace
                     email: ada@example.com
+                    phone: null
                     createdAt: '2026-11-17T10:00:00.000Z'
                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjBjLi4uIn0.signature
                   expiresAt: '2026-11-24T10:00:00.000Z'
@@ -124,11 +127,119 @@ paths:
                     id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
                     name: Ada Lovelace
                     email: ada@example.com
+                    phone: null
                     createdAt: '2026-11-17T10:00:00.000Z'
                   accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjBjLi4uIn0.signature
                   expiresAt: '2026-11-24T10:00:00.000Z'
         '401':
           description: Wrong email or password (`INVALID_CREDENTIALS`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Incorrect email or password
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /users/me:
+    get:
+      tags: [Profile]
+      summary: Get your profile
+      description: |
+        The signed-in user's id, name, email, phone and creation date. Never includes any
+        credential field. A token for an account that no longer exists is a `401`; the app
+        uses this to check a stored session when it starts.
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                success: true
+                data:
+                  id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
+                  name: Ada Lovelace
+                  email: ada@example.com
+                  phone: +1 555 123 4567
+                  createdAt: '2026-11-17T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    patch:
+      tags: [Profile]
+      summary: Update your name and phone
+      description: |
+        Partial update: send `name`, `phone` or both. `id`, `email` and any other field in the
+        body are ignored. An empty `name` is a `422` and nothing is changed. Send `phone: ""`
+        or `null` to remove the number.
+      operationId: updateMe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                success: true
+                data:
+                  id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
+                  name: Ada King
+                  email: ada@example.com
+                  phone: +1 555 123 4567
+                  createdAt: '2026-11-17T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/me/password:
+    post:
+      tags: [Profile]
+      summary: Change your password
+      description: |
+        Needs the current password. A wrong current password is `401 INVALID_CREDENTIALS` and
+        nothing changes. The new password follows the registration rules and must differ from
+        the current one. Rate limited like login. Tokens already issued stay valid until they
+        expire.
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: The password was replaced.
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  changed: true
+        '401':
+          description: Missing or invalid token (`UNAUTHENTICATED`), or the current password is wrong (`INVALID_CREDENTIALS`).
           content:
             application/json:
               schema:
@@ -527,12 +638,39 @@ components:
         password: { type: string, example: Sup3rSecret }
     User:
       type: object
-      required: [id, name, email, createdAt]
+      required: [id, name, email, phone, createdAt]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         email: { type: string, format: email }
+        phone: { type: string, nullable: true, description: 'Contact number, or null when none is set.' }
         createdAt: { type: string, format: date-time }
+    UserResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          $ref: '#/components/schemas/User'
+    UpdateProfileRequest:
+      type: object
+      description: Only these fields are read. Anything else in the body (id, email, ...) is ignored.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, example: Ada King }
+        phone:
+          type: string
+          nullable: true
+          description: 6 to 15 digits with optional +, spaces, brackets, dashes and dots. An empty string or null clears it.
+          example: +1 555 123 4567
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, example: Sup3rSecret }
+        newPassword:
+          type: string
+          description: At least 8 characters with a letter and a number. Must differ from the current password.
+          example: N3wPassword!
     AuthResponse:
       type: object
       required: [success, data]

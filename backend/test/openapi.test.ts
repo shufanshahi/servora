@@ -29,6 +29,8 @@ describe('docs/openapi.yaml', () => {
         '/appointments',
         '/appointments/{id}',
         '/appointments/{id}/cancel',
+        '/users/me',
+        '/users/me/password',
       ]),
     );
     expect(Object.keys(paths['/services']?.get?.responses ?? {})).toEqual(
@@ -76,6 +78,28 @@ describe('docs/openapi.yaml', () => {
       expect(paths[path]?.[method]?.security, `${method} ${path}`).toEqual([{ bearerAuth: [] }]);
     }
     expect(paths['/services/{id}/availability']?.get?.security).toBeUndefined();
+  });
+
+  it('documents the profile endpoints, all behind a token', async () => {
+    const api = await SwaggerParser.dereference(specPath);
+    const paths = api.paths as unknown as Record<
+      string,
+      Record<string, { responses: Record<string, unknown>; security?: unknown[] }>
+    >;
+    const codes = (path: string, method: string) =>
+      Object.keys(paths[path]?.[method]?.responses ?? {});
+    expect(codes('/users/me', 'get')).toEqual(expect.arrayContaining(['200', '401']));
+    expect(codes('/users/me', 'patch')).toEqual(expect.arrayContaining(['200', '401', '422']));
+    expect(codes('/users/me/password', 'post')).toEqual(
+      expect.arrayContaining(['200', '401', '422', '429']),
+    );
+    for (const [path, method] of [
+      ['/users/me', 'get'],
+      ['/users/me', 'patch'],
+      ['/users/me/password', 'post'],
+    ] as const) {
+      expect(paths[path]?.[method]?.security, `${method} ${path}`).toEqual([{ bearerAuth: [] }]);
+    }
   });
 
   it('only mentions error codes that really exist', () => {

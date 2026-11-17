@@ -122,6 +122,29 @@ npm run seed    # creates or resets demo@servora.test / Demo1234
 The seed is safe to run repeatedly. It refuses to run when `NODE_ENV=production` because the
 demo password is public.
 
+## Profile
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /users/me` | Your id, name, email, phone and creation date (token required) |
+| `PATCH /users/me` | Update `name` and/or `phone` |
+| `POST /users/me/password` | Change your password (`currentPassword`, `newPassword`) |
+
+`PATCH /users/me` reads only `name` and `phone`: `id`, `email` and any other field in the body are
+ignored, so an account cannot be re-pointed or have its credentials touched through it. An empty
+name is a `422` and changes nothing. `phone` is optional (6 to 15 digits, with an optional `+` and
+spaces, brackets, dashes or dots); send `""` or `null` to remove it. Responses never contain a
+password or hash.
+
+Changing the password needs the current one (wrong: `401 INVALID_CREDENTIALS`, nothing changes),
+applies the registration rules to the new one and refuses to reuse the current one. It shares the
+login rate limiter. Tokens issued earlier stay valid until they expire (there is no server-side
+revocation list), so changing a password does not sign out other devices.
+
+`users` has a nullable `phone` column (migration `add-user-phone`). A token for an account that has
+been deleted gets `401` from `GET /users/me`; the mobile app uses that call to check a stored
+session when it starts.
+
 ## Service catalogue
 
 | Endpoint | Purpose |

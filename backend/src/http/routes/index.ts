@@ -11,6 +11,8 @@ import { createServicesRouter } from '../../modules/services/services.routes';
 import { ServicesRepository } from '../../modules/services/services.repository';
 import { ServicesService } from '../../modules/services/services.service';
 import { UsersRepository } from '../../modules/users/users.repository';
+import { createUsersRouter } from '../../modules/users/users.routes';
+import { UsersService } from '../../modules/users/users.service';
 import { createRequireAuth } from '../middleware/require-auth';
 import { createRateLimiter } from '../middleware/rate-limit';
 import { healthRouter } from './health.routes';
@@ -46,6 +48,9 @@ export function createRoutes({ config, db, clock = () => new Date() }: RouteDeps
 
   routes.use(healthRouter);
   routes.use(createAuthRouter(auth, authLimiter));
+  routes.use(
+    createUsersRouter(new UsersService(config, users), createRequireAuth(tokens), authLimiter),
+  );
   routes.use(createServicesRouter(services, appointments));
   routes.use(createAppointmentsRouter(appointments, createRequireAuth(tokens)));
   return routes;

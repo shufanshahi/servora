@@ -32,6 +32,7 @@ describe('POST /auth/register', () => {
       id: expect.stringMatching(/^[0-9a-f-]{36}$/),
       name: 'Ada Lovelace',
       email: 'ada@example.com',
+      phone: null,
       createdAt: expect.any(String),
     });
     expect(tokens.verify(accessToken).userId).toBe(user.id);
