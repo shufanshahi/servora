@@ -12,11 +12,13 @@ import 'package:servora/core/session/token_store.dart';
 
 import 'package:servora/features/booking/data/appointments_repository.dart';
 import 'package:servora/features/booking/presentation/booking_providers.dart';
+import 'package:servora/features/profile/data/profile_repository.dart';
 import 'package:servora/features/services/data/services_repository.dart';
 import 'package:servora/features/services/presentation/services_providers.dart';
 import 'package:servora/features/services/presentation/widgets/service_image.dart';
 
 import 'fake_appointments_repository.dart';
+import 'fake_profile_repository.dart';
 import 'fake_services_repository.dart';
 import 'fake_token_store.dart';
 import 'fixtures.dart';
@@ -40,6 +42,13 @@ List<Override> serviceOverrides({
     imageFactory ?? (url) => MemoryImage(_pixel),
   ),
   searchDebounceProvider.overrideWithValue(const Duration(milliseconds: 20)),
+];
+
+/// Keeps the Profile tab and session validation off the network.
+List<Override> profileOverrides({ProfileRepository? repository}) => [
+  profileRepositoryProvider.overrideWithValue(
+    repository ?? FakeProfileRepository(),
+  ),
 ];
 
 /// Overrides that keep the booking screens off the network, with the clock fixed at
@@ -83,10 +92,14 @@ Widget servoraApp({
   ServicesRepository? servicesRepository,
   ServiceImageProviderFactory? imageFactory,
   AppointmentsRepository? appointmentsRepository,
+  ProfileRepository? profileRepository,
   DateTime? now,
+  FakeTokenStore? tokenStore,
 }) {
   return ProviderScope(
     overrides: [
+      // In memory: the real secure storage never answers in a test.
+      tokenStoreProvider.overrideWithValue(tokenStore ?? FakeTokenStore()),
       sessionProvider.overrideWith(
         () => _FixedSession(session ?? sessionFor(status)),
       ),
@@ -95,6 +108,7 @@ Widget servoraApp({
         imageFactory: imageFactory,
       ),
       ...bookingOverrides(repository: appointmentsRepository, now: now),
+      ...profileOverrides(repository: profileRepository),
       ...overrides,
     ],
     child: const ServoraApp(),
@@ -109,6 +123,7 @@ Widget servoraAppWithRealSession(
   ServicesRepository? servicesRepository,
   ServiceImageProviderFactory? imageFactory,
   AppointmentsRepository? appointmentsRepository,
+  ProfileRepository? profileRepository,
   DateTime? now,
 }) {
   return ProviderScope(
@@ -119,6 +134,7 @@ Widget servoraAppWithRealSession(
         imageFactory: imageFactory,
       ),
       ...bookingOverrides(repository: appointmentsRepository, now: now),
+      ...profileOverrides(repository: profileRepository),
       ...overrides,
     ],
     child: const ServoraApp(),

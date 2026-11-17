@@ -60,6 +60,11 @@ or the LAN address.)
   with `flutter_secure_storage` (Android Keystore-backed), never in plain preferences. On launch the
   app reads them, shows a splash screen briefly, then goes straight to Home, or to the sign-in
   screen if nothing valid is saved.
+- **Checked with the server.** A saved session opens straight to Home, then the app asks
+  `GET /users/me` whether the token is still good. A 401 (expired, tampered, or the account was
+  deleted) clears the stored token and returns to sign-in; being offline or a server error keeps
+  you signed in, because they say nothing about the token. The call also refreshes the saved
+  copy of your details.
 - **Expiry.** A saved token that has expired is deleted on launch and the sign-in screen explains
   "Your session has expired". If the server rejects a token that a request carried (HTTP 401) the
   session is cleared and the user is returned to sign-in with the same message. A *failed login*
@@ -154,6 +159,32 @@ Verified on an Android emulator against the real API with two accounts: a time b
 account was greyed out for the other, a pending booking turned Confirmed after the delay, and
 cancelling released the time.
 
+## Profile
+
+The Profile tab shows your name and email and lets you edit your name and optional phone number.
+
+- **Edit and save.** Name and phone are validated as you type with the API's own rules (a name is
+  required, a phone has 6 to 15 digits and only digits and `+ ( ) - .` can be typed). Saving shows
+  "Profile updated" and the new name appears everywhere it is displayed, because the session's
+  copy of the user is updated, and it survives a restart because the saved session is rewritten.
+  The email is shown but cannot be changed.
+- **When saving fails** the app shows why (offline, server error, or a message under the field) and
+  keeps what you typed, with a **Try again** button.
+- **Latest details.** Opening the tab quietly refreshes your details from the server without
+  overwriting anything you are in the middle of editing.
+- **Change password** is an optional form below the details: current password and a new one with
+  the same rules as registration. A wrong current password is explained under that field and does
+  **not** sign you out.
+- **Sign out** asks for confirmation, then clears the token and the saved user.
+
+| Profile | Wrong current password |
+|---|---|
+| ![Profile with editable name and phone](docs/screenshots/profile.jpg) | ![Change password form with a wrong current password message](docs/screenshots/profile-password-error.jpg) |
+
+Verified on an Android emulator against the real API: an edited name and phone appeared on the
+profile screen at once, were still there after force-stopping and relaunching the app, and matched
+what the server returns.
+
 ## Tests and checks
 
 ```bash
@@ -193,6 +224,7 @@ lib/
     auth/      login and registration
     services/  Home (search, chips, featured, list) and the service detail screen
     booking/   booking screen, confirmation, My Bookings, booking detail and cancel
+    profile/   profile screen (edit name and phone, change password, sign out)
 test/
 tool/          small developer scripts
 ```

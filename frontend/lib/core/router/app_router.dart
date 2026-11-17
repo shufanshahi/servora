@@ -12,6 +12,7 @@ import 'package:servora/features/booking/presentation/booking_confirmation_scree
 import 'package:servora/features/booking/presentation/booking_detail_screen.dart';
 import 'package:servora/features/booking/presentation/booking_screen.dart';
 import 'package:servora/features/booking/presentation/my_bookings_screen.dart';
+import 'package:servora/features/profile/presentation/profile_screen.dart';
 import 'package:servora/features/services/domain/service.dart';
 import 'package:servora/features/services/presentation/home_screen.dart';
 import 'package:servora/features/services/presentation/service_detail_screen.dart';
@@ -117,7 +118,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
-                builder: (_, _) => const ProfilePlaceholderPage(),
+                builder: (_, _) => const ProfileScreen(),
               ),
             ],
           ),

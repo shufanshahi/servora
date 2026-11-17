@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:servora/core/domain/app_user.dart';
+import 'package:servora/core/error/app_failure.dart';
+import 'package:servora/features/profile/data/profile_repository.dart';
 import 'package:servora/core/session/session_state.dart';
 import 'package:servora/core/session/stored_session.dart';
 import 'package:servora/core/session/token_store.dart';
@@ -47,11 +50,52 @@ class SessionNotifier extends Notifier<SessionState> {
       state = const SessionUnauthenticated(message: sessionExpiredMessage);
       return;
     }
+    // Signed in straight away, so the app opens at once (and still works offline)...
     state = SessionAuthenticated(
       user: saved.user,
       accessToken: saved.accessToken,
       expiresAt: saved.expiresAt,
     );
+    // ...then the server confirms the session is still good.
+    await _validate();
+  }
+
+  /// Asks the server who this token belongs to. A 401 ends the session and clears the
+  /// stored token; a fresher copy of the user replaces the cached one. Any other failure
+  /// (offline, server down) leaves the user signed in: it says nothing about the token.
+  Future<void> _validate() async {
+    try {
+      final user = await ref.read(profileRepositoryProvider).me();
+      if (!ref.mounted) return;
+      await updateUser(user);
+    } on UnauthenticatedFailure {
+      await expire();
+    } on AppFailure {
+      // Keep the local session.
+    }
+  }
+
+  /// Replaces the signed-in user's details (after a profile edit or a refresh), here and
+  /// in the saved session, so the new name shows everywhere and survives a restart.
+  Future<void> updateUser(AppUser user) async {
+    final current = state;
+    if (current is! SessionAuthenticated || current.user == user) return;
+    state = SessionAuthenticated(
+      user: user,
+      accessToken: current.accessToken,
+      expiresAt: current.expiresAt,
+    );
+    try {
+      await _store.write(
+        StoredSession(
+          accessToken: current.accessToken,
+          expiresAt: current.expiresAt,
+          user: user,
+        ),
+      );
+    } on Object {
+      // Not saved, but the in-memory session is right for this run.
+    }
   }
 
   /// Signs the user in after a successful register or login and saves the session.

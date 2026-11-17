@@ -88,7 +88,7 @@ void main() {
 
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
-      expect(find.text('Your details will appear here.'), findsOneWidget);
+      expect(find.text('Save changes'), findsOneWidget);
     });
 
     testWidgets('tabs preserve their scroll position when switching', (

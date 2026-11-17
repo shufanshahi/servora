@@ -1,18 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:servora/core/error/app_failure.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:servora/core/session/session_notifier.dart';
 import 'package:servora/core/session/session_state.dart';
 import 'package:servora/core/session/token_store.dart';
 
+import 'package:servora/features/profile/data/profile_repository.dart';
+
+import '../../support/fake_profile_repository.dart';
 import '../../support/fake_token_store.dart';
 import '../../support/fixtures.dart';
 
 final now = DateTime.utc(2026, 11, 17, 12);
 
-ProviderContainer makeContainer(FakeTokenStore store) {
+ProviderContainer makeContainer(
+  FakeTokenStore store, {
+  FakeProfileRepository? profile,
+}) {
   final container = ProviderContainer(
     overrides: [
       tokenStoreProvider.overrideWithValue(store),
+      profileRepositoryProvider.overrideWithValue(
+        profile ?? FakeProfileRepository(),
+      ),
       clockProvider.overrideWithValue(() => now),
     ],
   );
@@ -214,6 +224,86 @@ void main() {
           (container.read(sessionProvider) as SessionUnauthenticated).message,
           isNull,
         );
+      },
+    );
+  });
+
+  group('restore validates the session with the server', () {
+    FakeTokenStore valid() => FakeTokenStore(
+      storedSession(expiresAt: now.add(const Duration(days: 3))),
+    );
+
+    test('asks the server once and stays signed in when it agrees', () async {
+      final profile = FakeProfileRepository();
+      final container = makeContainer(valid(), profile: profile);
+      final state = await restored(container);
+      expect(profile.meCalls, 1);
+      expect(state, isA<SessionAuthenticated>());
+    });
+
+    test('a 401 ends the session and clears the stored token', () async {
+      final store = valid();
+      final profile = FakeProfileRepository()
+        ..onMe = () async => throw const UnauthenticatedFailure();
+      final state = await restored(makeContainer(store, profile: profile));
+
+      expect(state, isA<SessionUnauthenticated>());
+      expect((state as SessionUnauthenticated).message, sessionExpiredMessage);
+      expect(store.session, isNull);
+      expect(store.clears, 1);
+    });
+
+    test('a user deleted on the server is signed out too', () async {
+      final store = valid();
+      final profile = FakeProfileRepository()
+        ..onMe = () async => throw const UnauthenticatedFailure(
+          message: 'Account no longer exists',
+        );
+      expect(
+        await restored(makeContainer(store, profile: profile)),
+        isA<SessionUnauthenticated>(),
+      );
+      expect(store.session, isNull);
+    });
+
+    test('being offline keeps the user signed in', () async {
+      final store = valid();
+      final profile = FakeProfileRepository()
+        ..onMe = () async => throw const NetworkFailure();
+      final state = await restored(makeContainer(store, profile: profile));
+      expect(state, isA<SessionAuthenticated>());
+      expect(store.session, isNotNull);
+      expect(store.clears, 0);
+    });
+
+    test('a server error keeps the user signed in', () async {
+      final profile = FakeProfileRepository()
+        ..onMe = () async => throw const ServerFailure();
+      expect(
+        await restored(makeContainer(valid(), profile: profile)),
+        isA<SessionAuthenticated>(),
+      );
+    });
+
+    test('fresher details replace the saved ones', () async {
+      final store = valid();
+      final profile = FakeProfileRepository()
+        ..onMe = () async => testUser.copyWith(name: 'Renamed Elsewhere');
+      final state = await restored(makeContainer(store, profile: profile));
+      expect((state as SessionAuthenticated).user.name, 'Renamed Elsewhere');
+      expect(store.session!.user.name, 'Renamed Elsewhere');
+    });
+
+    test(
+      'a locally expired token is cleared without asking the server',
+      () async {
+        final store = FakeTokenStore(
+          storedSession(expiresAt: now.subtract(const Duration(minutes: 1))),
+        );
+        final profile = FakeProfileRepository();
+        await restored(makeContainer(store, profile: profile));
+        expect(profile.meCalls, 0);
+        expect(store.session, isNull);
       },
     );
   });

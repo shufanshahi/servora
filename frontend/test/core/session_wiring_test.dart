@@ -97,7 +97,16 @@ void main() {
 
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sign out'));
+      final signOut = find.widgetWithText(OutlinedButton, 'Sign out');
+      await tester.scrollUntilVisible(
+        signOut,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(signOut);
+      await tester.pumpAndSettle();
+      // The app asks first.
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
       await tester.pumpAndSettle();
 
       expect(currentPath(tester), '/login');

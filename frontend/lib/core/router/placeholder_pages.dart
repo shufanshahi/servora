@@ -1,9 +1,5 @@
-import 'dart:async';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/layout/responsive.dart';
-import 'package:servora/core/session/session_notifier.dart';
 import 'package:servora/core/widgets/empty_view.dart';
 import 'package:servora/core/widgets/loading_view.dart';
 
@@ -30,21 +26,4 @@ class AssistantPlaceholderPage extends StatelessWidget {
       icon: Icons.chat_bubble_outline,
     ),
   );
-}
-
-class ProfilePlaceholderPage extends ConsumerWidget {
-  const ProfilePlaceholderPage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return MaxContentWidth(
-      child: EmptyView(
-        title: 'Profile',
-        message: 'Your details will appear here.',
-        icon: Icons.person_outline,
-        actionLabel: 'Sign out',
-        onAction: () => unawaited(ref.read(sessionProvider.notifier).logout()),
-      ),
-    );
-  }
 }

@@ -92,6 +92,15 @@ describe('PATCH /users/me', () => {
     expect(res.body.data).toMatchObject({ name: 'Only Name', phone: '+44 20 7946 0958' });
   });
 
+  it.each(['(555) 123-4567', '+44 20 7946 0958', '555.123.4567', '0044 20 7946 0958'])(
+    'accepts the phone %j',
+    async (phone) => {
+      const res = await patch(ada.token, { phone });
+      expect(res.status).toBe(200);
+      expect(res.body.data.phone).toBe(phone);
+    },
+  );
+
   it('clears the phone with an empty string or null', async () => {
     await patch(ada.token, { phone: '555-123-4567' });
     expect((await patch(ada.token, { phone: '' })).body.data.phone).toBeNull();

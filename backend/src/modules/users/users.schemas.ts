@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { passwordRules } from '../auth/auth.schemas';
 
 /** Digits with the usual separators, optional leading +. Permissive on purpose. */
-const PHONE_PATTERN = /^\+?[0-9][0-9 ()\-.]*$/;
+const PHONE_PATTERN = /^\+?[0-9(][0-9 ()\-.]*$/;
 
 const name = z
   .string({ error: 'Name is required' })
