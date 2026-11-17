@@ -1,0 +1,4 @@
+# Root compose: runs the whole Servora system.
+# Each folder also has its own compose file and can be run on its own.
+include:
+  - backend/docker-compose.yml

@@ -1,0 +1,22 @@
+# dependencies / build
+node_modules/
+dist/
+build/
+coverage/
+.dart_tool/
+.flutter-plugins*
+frontend/out/
+
+# environment & secrets
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+key.properties
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
