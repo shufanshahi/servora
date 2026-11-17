@@ -8,6 +8,8 @@ import 'package:servora/core/widgets/empty_view.dart';
 import 'package:servora/core/widgets/error_view.dart';
 import 'package:servora/core/widgets/loading_view.dart';
 
+import '../../support/app_harness.dart';
+
 Widget host(Widget child) => MaterialApp(
   theme: AppTheme.light(),
   home: Scaffold(body: child),
@@ -119,4 +121,49 @@ void main() {
       );
     });
   });
+
+  group('small viewports', () {
+    testWidgets('EmptyView scrolls instead of overflowing', (t) async {
+      useScreen(t, width: 320, height: 300, textScale: 2.0);
+      await t.pumpWidget(
+        host(
+          const EmptyView(
+            title: 'No bookings yet',
+            message: 'Your upcoming and previous bookings will appear here.',
+            actionLabel: 'Browse services',
+            onAction: _noop,
+          ),
+        ),
+      );
+      expect(t.takeException(), isNull);
+      // Content is taller than the viewport but reachable by scrolling.
+      await t.scrollUntilVisible(
+        find.text('Browse services'),
+        100,
+        scrollable: find.byType(Scrollable),
+      );
+      expect(find.text('Browse services'), findsOneWidget);
+    });
+
+    testWidgets('ErrorView scrolls instead of overflowing', (t) async {
+      useScreen(t, width: 320, height: 300, textScale: 2.0);
+      await t.pumpWidget(
+        host(
+          const ErrorView(
+            message: "Can't reach the server. Check your internet connection.",
+            onRetry: _noop,
+          ),
+        ),
+      );
+      expect(t.takeException(), isNull);
+      await t.scrollUntilVisible(
+        find.text('Try again'),
+        100,
+        scrollable: find.byType(Scrollable),
+      );
+      expect(find.text('Try again'), findsOneWidget);
+    });
+  });
 }
+
+void _noop() {}

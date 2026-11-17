@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/theme/app_spacing.dart';
 import 'package:servora/core/widgets/app_button.dart';
+import 'package:servora/core/widgets/centered_scroll.dart';
 
 /// Shown when a load succeeded but there is nothing to display.
 class EmptyView extends StatelessWidget {
@@ -24,7 +25,7 @@ class EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
+    return CenteredScroll(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
