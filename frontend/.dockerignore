@@ -1,0 +1,11 @@
+build
+.dart_tool
+.idea
+out
+android/.gradle
+android/local.properties
+.env
+.env.*
+*.log
+Dockerfile
+docker-compose.yml

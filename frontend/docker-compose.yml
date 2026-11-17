@@ -1,0 +1,26 @@
+# Frontend build tooling. The Flutter app is not a server, so the only service here
+# builds the release APK. It is opt-in (profile "apk") and never starts with a plain
+# `docker compose up`.
+#
+#   docker compose --profile apk run --rm apk-builder
+#   API_BASE_URL=https://api.example.com docker compose --profile apk run --rm apk-builder
+#
+# The APK is written to ./out/app-release.apk.
+services:
+  apk-builder:
+    profiles: ['apk']
+    build:
+      context: .
+      args:
+        API_BASE_URL: ${API_BASE_URL:-http://10.0.2.2:3000}
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://10.0.2.2:3000}
+    volumes:
+      - ./out:/out
+      # Keep downloaded dependencies between runs so rebuilds are fast.
+      - gradle_cache:/root/.gradle
+      - pub_cache:/root/.pub-cache
+
+volumes:
+  gradle_cache:
+  pub_cache:
