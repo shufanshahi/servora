@@ -123,6 +123,37 @@ For a physical phone use your computer's LAN address instead (for example
 `http://192.168.1.20:3000`); for a hosted API use its public `https://` address. If pictures show
 the placeholder icon while the data loads fine, this is almost always the cause.
 
+## Booking and My Bookings
+
+- **Booking screen.** *Book this service* opens a date button (the calendar only allows today
+  up to 30 days ahead, the API's booking window) and a grid of times. Times that are taken,
+  too soon or past are shown greyed out and cannot be tapped; changing the date clears the
+  chosen time. A summary and an optional note come before **Confirm booking**.
+- **Taken meanwhile.** If someone else books the time first, the app says so, clears your
+  choice, reloads the grid (the time is now greyed out) and keeps you on the same screen.
+  Tapping Confirm repeatedly sends one request.
+- **Confirmation.** After a successful booking the app shows service, date, time, price and a
+  **Pending** badge, with buttons to My Bookings and Home. A pending booking becomes
+  **Confirmed** automatically after a couple of minutes.
+- **My Bookings.** *Upcoming* and *Previous* tabs with a status badge per booking (Pending,
+  Confirmed, Completed, Cancelled; each has its own colour, icon and label), pull to refresh,
+  and empty and error states. Tapping a booking opens its details.
+- **Cancel.** Only pending bookings offer **Cancel booking**, behind a confirmation. If the
+  booking was confirmed in the meantime the app explains that it can no longer be cancelled
+  and shows the real status.
+- **Time zones.** Time labels in the grid come from the API in the business time zone (UTC by
+  default) and the screen says which. My Bookings, the confirmation and the details use the
+  phone's own time zone and say so; when the two differ the summary shows both ("10:00 UTC,
+  your time 4:00 PM").
+
+| Choosing a time | Confirmation | My Bookings | Previous (cancelled) | Cancel |
+|---|---|---|---|---|
+| ![Booking screen with a time chosen and the summary](docs/screenshots/booking.jpg) | ![Booking confirmation with a Pending badge](docs/screenshots/confirmation.jpg) | ![Upcoming bookings with Confirmed and Pending badges](docs/screenshots/my-bookings.jpg) | ![Previous bookings with Cancelled badges](docs/screenshots/my-bookings-previous.jpg) | ![Cancel confirmation dialog](docs/screenshots/cancel-dialog.jpg) |
+
+Verified on an Android emulator against the real API with two accounts: a time booked by one
+account was greyed out for the other, a pending booking turned Confirmed after the delay, and
+cancelling released the time.
+
 ## Tests and checks
 
 ```bash
@@ -161,7 +192,7 @@ lib/
   features/    one folder per feature: data/ domain/ presentation/
     auth/      login and registration
     services/  Home (search, chips, featured, list) and the service detail screen
-    booking/   a placeholder screen until the booking flow is built
+    booking/   booking screen, confirmation, My Bookings, booking detail and cancel
 test/
 tool/          small developer scripts
 ```

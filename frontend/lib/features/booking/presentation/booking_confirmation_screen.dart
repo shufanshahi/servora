@@ -99,6 +99,14 @@ class BookingConfirmationScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                "Times are shown in your phone's time zone.",
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
               const SizedBox(height: AppSpacing.lg),
               AppButton(
                 label: 'View my bookings',

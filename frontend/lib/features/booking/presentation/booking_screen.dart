@@ -140,6 +140,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                     service: svc,
                     date: booking.date,
                     slot: booking.slot!,
+                    timeZone: availability.value?.timeZone ?? '',
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -263,11 +264,21 @@ class _Summary extends StatelessWidget {
     required this.service,
     required this.date,
     required this.slot,
+    required this.timeZone,
   });
 
   final Service service;
   final DateTime date;
   final Slot slot;
+
+  /// The zone the slot's label is in.
+  final String timeZone;
+
+  String get _localLabel {
+    final local = DateTime.parse(slot.startsAt).toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +320,11 @@ class _Summary extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             row('Service', service.name),
             row('Date', formatDate(date)),
-            row('Time', slot.label),
+            row('Time', '${slot.label} $timeZone'.trim()),
+            // Said plainly when the phone is in another zone, so nobody is surprised by
+            // the time on the confirmation and in My Bookings (which use the phone's zone).
+            if (_localLabel != slot.label)
+              row('Your time', formatTime(DateTime.parse(slot.startsAt))),
             row('Duration', formatDuration(service.durationMinutes)),
             row('Price', formatPrice(service.price)),
           ],

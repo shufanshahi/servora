@@ -193,6 +193,13 @@ class _Content extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          "Times are shown in your phone's time zone.",
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         // Only pending bookings can be cancelled.
         if (appointment.canCancel) ...[
           const SizedBox(height: AppSpacing.lg),
