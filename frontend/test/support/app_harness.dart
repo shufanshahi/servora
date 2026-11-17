@@ -1,24 +1,61 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:servora/app.dart';
-import 'package:servora/core/router/auth_status.dart';
+import 'package:servora/core/session/session_notifier.dart';
+import 'package:servora/core/session/session_state.dart';
+import 'package:servora/core/session/token_store.dart';
 
-class _FixedAuthStatus extends AuthStatusNotifier {
-  _FixedAuthStatus(this.initial);
+import 'fake_token_store.dart';
+import 'fixtures.dart';
 
-  final AuthStatus initial;
+/// A session that is exactly [initial] and never restores from storage, so a test
+/// can start in any state without waiting.
+class _FixedSession extends SessionNotifier {
+  _FixedSession(this.initial);
+
+  final SessionState initial;
 
   @override
-  AuthStatus build() => initial;
+  SessionState build() => initial;
 }
 
-/// The whole app with a chosen starting auth state.
-Widget servoraApp({AuthStatus status = AuthStatus.unauthenticated}) {
+SessionState sessionFor(AuthStatus status) => switch (status) {
+  AuthStatus.unknown => const SessionUnknown(),
+  AuthStatus.unauthenticated => const SessionUnauthenticated(),
+  AuthStatus.authenticated => SessionAuthenticated(
+    user: testUser,
+    accessToken: 'jwt-token',
+    expiresAt: DateTime.utc(2099),
+  ),
+};
+
+/// The whole app starting in a chosen auth state, with the session held in memory.
+Widget servoraApp({
+  AuthStatus status = AuthStatus.unauthenticated,
+  SessionState? session,
+  List<Override> overrides = const [],
+}) {
   return ProviderScope(
     overrides: [
-      authStatusProvider.overrideWith(() => _FixedAuthStatus(status)),
+      sessionProvider.overrideWith(
+        () => _FixedSession(session ?? sessionFor(status)),
+      ),
+      ...overrides,
     ],
+    child: const ServoraApp(),
+  );
+}
+
+/// The whole app with the REAL session notifier on top of [store], for tests that
+/// sign in and out. Starts in "unknown" and restores from [store] like a real launch.
+Widget servoraAppWithRealSession(
+  FakeTokenStore store, {
+  List<Override> overrides = const [],
+}) {
+  return ProviderScope(
+    overrides: [tokenStoreProvider.overrideWithValue(store), ...overrides],
     child: const ServoraApp(),
   );
 }

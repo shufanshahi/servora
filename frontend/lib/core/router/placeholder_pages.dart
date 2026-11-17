@@ -1,11 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/layout/responsive.dart';
-import 'package:servora/core/router/auth_status.dart';
-import 'package:servora/core/theme/app_spacing.dart';
-import 'package:servora/core/widgets/app_button.dart';
+import 'package:servora/core/session/session_notifier.dart';
 import 'package:servora/core/widgets/app_card.dart';
-import 'package:servora/core/widgets/centered_scroll.dart';
 import 'package:servora/core/widgets/empty_view.dart';
 import 'package:servora/core/widgets/loading_view.dart';
 
@@ -21,43 +20,17 @@ class SplashPage extends StatelessWidget {
       const Scaffold(body: LoadingView(message: 'Starting Servora'));
 }
 
-class LoginPlaceholderPage extends ConsumerWidget {
+/// Stand-in for the sign-in screen until it is built in the authentication change.
+class LoginPlaceholderPage extends StatelessWidget {
   const LoginPlaceholderPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: SafeArea(
-        child: MaxContentWidth(
-          child: CenteredScroll(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Servora',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  const Text(
-                    'Sign in screen arrives with the authentication change.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  AppButton(
-                    label: 'Continue (development stub)',
-                    onPressed: () => ref
-                        .read(authStatusProvider.notifier)
-                        .set(AuthStatus.authenticated),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: EmptyView(
+        title: 'Servora',
+        message: 'Sign in screen coming soon',
+        icon: Icons.lock_outline,
       ),
     );
   }
@@ -122,10 +95,8 @@ class ProfilePlaceholderPage extends ConsumerWidget {
         title: 'Profile',
         message: 'Your details will appear here.',
         icon: Icons.person_outline,
-        actionLabel: 'Sign out (development stub)',
-        onAction: () => ref
-            .read(authStatusProvider.notifier)
-            .set(AuthStatus.unauthenticated),
+        actionLabel: 'Sign out',
+        onAction: () => unawaited(ref.read(sessionProvider.notifier).logout()),
       ),
     );
   }

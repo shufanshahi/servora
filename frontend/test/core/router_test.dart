@@ -56,27 +56,8 @@ void main() {
     ) async {
       await tester.pumpWidget(servoraApp());
       await tester.pumpAndSettle();
-      expect(find.text('Continue (development stub)'), findsOneWidget);
+      expect(find.text('Sign in screen coming soon'), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
-    });
-
-    testWidgets('signing in shows the tabs and signing out returns to login', (
-      tester,
-    ) async {
-      await tester.pumpWidget(servoraApp());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Continue (development stub)'));
-      await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('Placeholder service 1'), findsOneWidget);
-
-      await tester.tap(find.text('Profile'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sign out (development stub)'));
-      await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsNothing);
-      expect(find.text('Continue (development stub)'), findsOneWidget);
     });
 
     testWidgets('an authenticated start goes straight to Home', (tester) async {

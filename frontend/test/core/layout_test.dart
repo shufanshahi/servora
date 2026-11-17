@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/layout/responsive.dart';
 import 'package:servora/core/router/auth_status.dart';
 
@@ -44,21 +43,14 @@ void main() {
       await visitAllTabs(tester);
     });
 
-    testWidgets('primary actions stay reachable at 2x text scale', (
-      tester,
-    ) async {
+    testWidgets('the signed-out screen fits at 2x text scale', (tester) async {
       useScreen(tester, width: 320, height: 640, textScale: 2.0);
       await tester.pumpWidget(servoraApp());
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      final button = find.text('Continue (development stub)');
-      expect(button, findsOneWidget);
-      final rect = tester.getRect(button);
+      final rect = tester.getRect(find.text('Sign in screen coming soon'));
       expect(rect.left, greaterThanOrEqualTo(0));
       expect(rect.right, lessThanOrEqualTo(320));
-      await tester.tap(button);
-      await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsOneWidget);
     });
   });
 

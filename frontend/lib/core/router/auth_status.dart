@@ -1,23 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:servora/core/session/session_notifier.dart';
+import 'package:servora/core/session/session_state.dart';
 
-/// Whether a user is signed in. The router reads this to decide where to send people.
-enum AuthStatus {
-  /// Still restoring a saved session (shows a splash screen).
-  unknown,
-  authenticated,
-  unauthenticated,
-}
+export 'package:servora/core/session/session_state.dart' show AuthStatus;
 
-/// Placeholder auth state so navigation can be built and tested before the auth
-/// feature exists. `add-user-auth` replaces this provider with the real session.
-class AuthStatusNotifier extends Notifier<AuthStatus> {
-  @override
-  AuthStatus build() => AuthStatus.unauthenticated;
-
-  // ignore: use_setters_to_change_properties
-  void set(AuthStatus status) => state = status;
-}
-
-final authStatusProvider = NotifierProvider<AuthStatusNotifier, AuthStatus>(
-  AuthStatusNotifier.new,
+/// What the router needs to know about the session: signed in, signed out, or still
+/// restoring. Derived from the real session, so the router and the rest of the app
+/// can never disagree.
+final authStatusProvider = Provider<AuthStatus>(
+  (ref) => ref.watch(sessionProvider).status,
 );
