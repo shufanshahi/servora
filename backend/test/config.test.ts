@@ -89,4 +89,48 @@ describe('server startup with a bad JWT secret', () => {
     // The process must exit before ever listening.
     expect(result.stdout).not.toContain('listening');
   }, 75_000);
+
+  describe('booking rules', () => {
+    it('has sensible defaults', () => {
+      const c = loadConfig(base);
+      expect(c.BUSINESS_TZ).toBe('UTC');
+      expect(c.BOOKING_OPEN_TIME).toBe('09:00');
+      expect(c.BOOKING_CLOSE_TIME).toBe('17:00');
+      expect(c.SLOT_INTERVAL_MINUTES).toBe(30);
+      expect(c.MIN_LEAD_MINUTES).toBe(60);
+      expect(c.BOOKING_HORIZON_DAYS).toBe(30);
+      expect(c.CONFIRM_DELAY_MINUTES).toBe(2);
+    });
+
+    it('accepts overrides', () => {
+      const c = loadConfig({
+        ...base,
+        BUSINESS_TZ: 'Asia/Karachi',
+        BOOKING_OPEN_TIME: '08:30',
+        SLOT_INTERVAL_MINUTES: '15',
+      });
+      expect(c.BUSINESS_TZ).toBe('Asia/Karachi');
+      expect(c.BOOKING_OPEN_TIME).toBe('08:30');
+      expect(c.SLOT_INTERVAL_MINUTES).toBe(15);
+    });
+
+    it.each([
+      ['BUSINESS_TZ', 'Mars/Olympus'],
+      ['BOOKING_OPEN_TIME', '9am'],
+      ['BOOKING_CLOSE_TIME', '24:00'],
+      ['SLOT_INTERVAL_MINUTES', '0'],
+      ['SLOT_INTERVAL_MINUTES', 'abc'],
+      ['MIN_LEAD_MINUTES', '-1'],
+      ['BOOKING_HORIZON_DAYS', '0'],
+      ['CONFIRM_DELAY_MINUTES', '-5'],
+    ])('rejects %s=%s', (key, value) => {
+      expect(() => loadConfig({ ...base, [key]: value })).toThrowError(new RegExp(key));
+    });
+
+    it('rejects closing time not after opening time', () => {
+      expect(() =>
+        loadConfig({ ...base, BOOKING_OPEN_TIME: '17:00', BOOKING_CLOSE_TIME: '09:00' }),
+      ).toThrowError(/BOOKING_CLOSE_TIME/);
+    });
+  });
 });

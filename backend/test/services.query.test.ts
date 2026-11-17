@@ -85,13 +85,12 @@ describe('buildListQuery', () => {
       expect(buildListQuery(filters({ sort, order })).text).toContain(expected);
     });
 
-    it('popular falls back to name order until bookings exist', () => {
-      expect(buildListQuery(filters({ sort: 'popular' })).text).toContain(
-        'ORDER BY name ASC, id ASC',
-      );
-      expect(buildListQuery(filters({ sort: 'popular', order: 'desc' })).text).toContain(
-        'ORDER BY name ASC, id ASC',
-      );
+    it('popular ranks by non-cancelled booking count, ignoring order', () => {
+      for (const order of ['asc', 'desc'] as const) {
+        const text = buildListQuery(filters({ sort: 'popular', order })).text;
+        expect(text).toContain("a.status <> 'CANCELLED'");
+        expect(text).toContain(') DESC, name ASC, id ASC');
+      }
     });
   });
 

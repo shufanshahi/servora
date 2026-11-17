@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import { ConfigError, loadConfig, type Config } from './config';
 import { createDb } from './db/pool';
 import { createApp } from './http/app';
+import { startStatusReconciler } from './modules/appointments/status-reconciler';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
   }
 
   const app = createApp({ config, db });
+  const stopReconciler = startStatusReconciler(db, config);
   const server: Server = app.listen(config.PORT, () => {
     console.log(`Servora API listening on port ${config.PORT} (${config.NODE_ENV})`);
   });
@@ -47,6 +49,7 @@ async function main(): Promise<void> {
     }, SHUTDOWN_TIMEOUT_MS);
     forceExit.unref();
 
+    stopReconciler();
     server.close(() => {
       db.close()
         .then(() => process.exit(0))

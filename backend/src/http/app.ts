@@ -16,6 +16,8 @@ export interface AppDeps {
   logSink?: LogSink;
   /** Extra routes mounted before the 404 handler. Intended for tests. */
   extraRoutes?: (app: Express) => void;
+  /** Source of "now" for booking rules. Defaults to the system clock; tests inject a fixed one. */
+  clock?: () => Date;
 }
 
 const JSON_BODY_LIMIT = '100kb';
@@ -59,7 +61,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
   mountDocs(app, config);
-  app.use(createRoutes({ config, db: deps.db }));
+  app.use(createRoutes({ config, db: deps.db, ...(deps.clock ? { clock: deps.clock } : {}) }));
   deps.extraRoutes?.(app);
 
   app.use(notFoundHandler);

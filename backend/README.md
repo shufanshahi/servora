@@ -174,6 +174,66 @@ there, but the demo user is skipped unless you set `SEED_ALLOW_PRODUCTION=true`.
   800 x 600 JPEG under 150 KB in `public/images/services/`; add or update the service in
   `src/db/seed-services.ts`; add a row to `ATTRIBUTION.md`; run `npm test` and `npm run seed`.
 
+## Appointments
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /services/:id/availability?date=YYYY-MM-DD` | Slots of one service on one day, each `available` or not (public) |
+| `POST /appointments` | Book a service (token required) |
+| `GET /appointments` | Your appointments; `scope=upcoming` or `previous`, `page`, `limit` |
+| `GET /appointments/:id` | One of your appointments |
+| `PATCH /appointments/:id/cancel` | Cancel a `PENDING` appointment |
+
+Every appointment endpoint only ever sees the signed-in user's own bookings; someone else's id is
+a plain `404`. Full request and response examples are in `/docs`.
+
+**Booking rules** (all configurable, see [Configuration](#configuration)). Start times sit on a
+grid (default every 30 minutes) between opening and closing time in `BUSINESS_TZ`, and the whole
+service must finish by closing time. A booking must start at least `MIN_LEAD_MINUTES` from now and
+at most `BOOKING_HORIZON_DAYS` ahead. A start time that breaks a rule is `422 VALIDATION_ERROR`
+(field `startsAt`). The price is copied from the service when the booking is made, so later price
+changes never rewrite history.
+
+**Capacity is one.** The API assumes a service can serve one customer at a time: two active
+(non-cancelled) appointments of the same service never overlap. This is enforced by the database
+itself with an exclusion constraint, not just by checking first, so simultaneous requests for one
+slot cannot both succeed: one gets `201`, the others `409 SLOT_UNAVAILABLE`. Back-to-back bookings
+are fine, different services never conflict, and cancelling frees the slot.
+
+**Status progression.**
+
+```
+PENDING --(after CONFIRM_DELAY_MINUTES)--> CONFIRMED --(end time passes)--> COMPLETED
+   |
+   +--(owner cancels)--> CANCELLED
+```
+
+`CANCELLED` and `COMPLETED` are final, and only `PENDING` appointments can be cancelled
+(`409 INVALID_STATUS_TRANSITION` otherwise). The progression is applied by a timer every 30
+seconds and again just before any appointment is read, so a client never sees a stale status.
+There is no payment or staff approval step: confirmation is automatic to keep the demo
+self-contained.
+
+### The `appointments` table
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `uuid` | Primary key, generated |
+| `user_id` | `uuid` | Owner; references `users`, deleted with the user |
+| `service_id` | `uuid` | References `services`; a service with bookings cannot be deleted |
+| `starts_at` | `timestamptz` | Start instant |
+| `ends_at` | `timestamptz` | Start plus the service duration; must be after `starts_at` |
+| `time_range` | `tstzrange` | Generated from the two columns above (`[)`), used by the overlap constraint |
+| `status` | `appointment_status` | `PENDING` (default), `CONFIRMED`, `COMPLETED`, `CANCELLED` |
+| `price_cents` | `integer` | Price when booked |
+| `note` | `text` | Optional, at most 500 characters |
+| `created_at` | `timestamptz` | |
+| `updated_at` | `timestamptz` | |
+| `cancelled_at` | `timestamptz` | Set when cancelled |
+
+The constraint `appointments_no_overlap` is `EXCLUDE USING gist (service_id WITH =, time_range
+WITH &&) WHERE (status <> 'CANCELLED')`. Indexes: `(user_id, starts_at)` and `(starts_at)`.
+
 ## Check it works
 
 ```bash
@@ -202,6 +262,13 @@ message if a required value is missing. See [`.env.example`](.env.example).
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | no | `900` | Length of that window |
 | `PUBLIC_BASE_URL` | no | `http://localhost:3000` | Base for absolute URLs (images) |
 | `TRUST_PROXY` | no | `0` | Number of reverse proxies in front of the API (use `1` on most hosts) |
+| `BUSINESS_TZ` | no | `UTC` | IANA time zone (for example `Asia/Karachi`) in which opening hours and "today" are interpreted |
+| `BOOKING_OPEN_TIME` | no | `09:00` | First bookable start time of the day (`HH:MM`, business time) |
+| `BOOKING_CLOSE_TIME` | no | `17:00` | Time by which a booking must end (`HH:MM`, business time) |
+| `SLOT_INTERVAL_MINUTES` | no | `30` | Spacing of bookable start times (5-240) |
+| `MIN_LEAD_MINUTES` | no | `60` | A booking must start at least this far in the future |
+| `BOOKING_HORIZON_DAYS` | no | `30` | How many days ahead bookings are accepted |
+| `CONFIRM_DELAY_MINUTES` | no | `2` | How long a booking stays `PENDING` before it is `CONFIRMED` |
 | `TEST_DATABASE_URL` | no | `...:5433/servora_test` | Test database (tests only) |
 
 ## API conventions
@@ -236,6 +303,8 @@ Passwords, tokens and request bodies are never written to logs.
 | `INTERNAL_ERROR` | 500 | Unexpected server fault; details are only in server logs |
 | `EMAIL_TAKEN` | 409 | Registration with an email that already has an account (compared case-insensitively) |
 | `INVALID_CREDENTIALS` | 401 | Wrong email or password; identical for both so registered emails are not revealed |
+| `SLOT_UNAVAILABLE` | 409 | The requested time overlaps an existing active booking of the service |
+| `INVALID_STATUS_TRANSITION` | 409 | The appointment's current status does not allow the change (only `PENDING` can be cancelled) |
 <!-- error-codes:end -->
 
 Later features add their own codes (for example `EMAIL_TAKEN`, `SLOT_UNAVAILABLE`) to

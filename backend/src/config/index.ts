@@ -1,4 +1,7 @@
+import { IANAZone } from 'luxon';
 import { z } from 'zod';
+
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -40,6 +43,22 @@ const schema = z.object({
   // Number of reverse proxies in front of the API (0 locally, 1 on most hosts). Needed so
   // rate limiting sees the real client IP instead of the proxy's.
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+
+  // Booking rules. All times are wall-clock times in BUSINESS_TZ.
+  BUSINESS_TZ: z
+    .string()
+    .default('UTC')
+    .refine((value) => IANAZone.isValidZone(value), 'BUSINESS_TZ must be an IANA time zone'),
+  BOOKING_OPEN_TIME: z.string().regex(HH_MM, 'must be HH:MM (24-hour)').default('09:00'),
+  BOOKING_CLOSE_TIME: z.string().regex(HH_MM, 'must be HH:MM (24-hour)').default('17:00'),
+  // Start times sit on a grid of this many minutes.
+  SLOT_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(240).default(30),
+  // A booking must start at least this many minutes from now.
+  MIN_LEAD_MINUTES: z.coerce.number().int().min(0).default(60),
+  // ...and no more than this many days ahead.
+  BOOKING_HORIZON_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  // How long a booking stays PENDING before it becomes CONFIRMED.
+  CONFIRM_DELAY_MINUTES: z.coerce.number().int().min(0).default(2),
 });
 
 /** Every environment variable the API reads (used to keep the docs in step). */
@@ -61,6 +80,13 @@ export class ConfigError extends Error {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const result = schema
     .superRefine((value, ctx) => {
+      if (value.BOOKING_OPEN_TIME >= value.BOOKING_CLOSE_TIME) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['BOOKING_CLOSE_TIME'],
+          message: 'BOOKING_CLOSE_TIME must be later than BOOKING_OPEN_TIME',
+        });
+      }
       if (
         value.NODE_ENV === 'production' &&
         value.JWT_SECRET.startsWith(PLACEHOLDER_SECRET_PREFIX)

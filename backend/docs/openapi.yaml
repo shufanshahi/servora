@@ -17,6 +17,8 @@ tags:
     description: Registration and login. Both are rate limited per client IP.
   - name: Services
     description: The public service catalogue. No token needed.
+  - name: Appointments
+    description: Booking a service and managing your own bookings. A token is required.
 
 paths:
   /health:
@@ -147,8 +149,8 @@ paths:
       summary: List and search services
       description: |
         Public (no token needed). Returns active services, 20 per page by default, ordered by
-        name. Filters combine with AND. `sort=popular` currently orders by name until bookings
-        exist to rank by.
+        name. Filters combine with AND. `sort=popular` lists the most-booked services first
+        (cancelled bookings do not count, ties fall back to name) and ignores `order`.
       operationId: listServices
       parameters:
         - name: q
@@ -247,6 +249,246 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /services/{id}/availability:
+    get:
+      tags: [Services]
+      summary: Bookable start times for a service on one day
+      description: |
+        Public (no token needed). Returns every start time on the day's grid whose full
+        duration fits before closing, each flagged `available` or not. A slot is unavailable
+        when it overlaps an active booking of this service, starts in the past or sooner than
+        the minimum lead time, or lies beyond the booking horizon. Cancelled bookings free
+        their slot. `date` is a calendar day in the business time zone (`timeZone` in the
+        response); `startsAt` and `endsAt` are UTC instants and `label` is the local start time.
+        A date before today or after the horizon is a `422`. Unknown, inactive and malformed
+        service ids are `404`.
+      operationId: getAvailability
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          description: Calendar day, `YYYY-MM-DD`, in the business time zone.
+          schema: { type: string, format: date }
+          example: '2030-05-06'
+      responses:
+        '200':
+          description: The day's slots in time order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+              example:
+                success: true
+                data:
+                  serviceId: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+                  date: '2030-05-06'
+                  timeZone: UTC
+                  durationMinutes: 60
+                  slots:
+                    - startsAt: '2030-05-06T09:00:00.000Z'
+                      endsAt: '2030-05-06T10:00:00.000Z'
+                      label: '09:00'
+                      available: true
+                    - startsAt: '2030-05-06T09:30:00.000Z'
+                      endsAt: '2030-05-06T10:30:00.000Z'
+                      label: '09:30'
+                      available: false
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /appointments:
+    post:
+      tags: [Appointments]
+      summary: Book a service
+      description: |
+        Creates a `PENDING` appointment for the signed-in user. `startsAt` must be a slot
+        start from the availability endpoint (on the grid, inside opening hours, finishing by
+        closing time, not in the past or inside the lead time, within the horizon). The end
+        time is the start plus the service duration and the price is copied from the service
+        at this moment. Two overlapping bookings of one service can never both succeed, even
+        when sent simultaneously: the loser gets `409 SLOT_UNAVAILABLE`.
+      operationId: createAppointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentRequest'
+            example:
+              serviceId: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+              startsAt: '2030-05-06T10:00:00Z'
+              note: Please use unscented oil
+      responses:
+        '201':
+          description: The new appointment, in `PENDING` status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+              example:
+                success: true
+                data:
+                  id: 0c6f3a52-61d4-4b0e-8d77-3a9b1f2e4c10
+                  service:
+                    id: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+                    name: Swedish Massage
+                    category: Wellness
+                    durationMinutes: 60
+                    imageUrl: http://localhost:3000/images/services/swedish-massage.jpg
+                  startsAt: '2030-05-06T10:00:00.000Z'
+                  endsAt: '2030-05-06T11:00:00.000Z'
+                  status: PENDING
+                  price: 65
+                  note: Please use unscented oil
+                  createdAt: '2030-05-01T08:00:00.000Z'
+                  cancelledAt: null
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The time overlaps an active booking of this service (`SLOT_UNAVAILABLE`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: SLOT_UNAVAILABLE
+                  message: That time is no longer available
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Appointments]
+      summary: List your appointments
+      description: |
+        Only the signed-in user's appointments, each with a service summary. `scope=upcoming`
+        returns pending and confirmed bookings starting now or later, soonest first.
+        `scope=previous` returns completed and cancelled ones plus any that already started,
+        newest first. Without a scope everything is returned, newest start first. Statuses
+        are brought up to date before the list is built.
+      operationId: listAppointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [upcoming, previous] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          description: Page size (1-50).
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: A page of appointments. An empty `data` array means there are none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentListResponse'
+              example:
+                success: true
+                data:
+                  - id: 0c6f3a52-61d4-4b0e-8d77-3a9b1f2e4c10
+                    service:
+                      id: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+                      name: Swedish Massage
+                      category: Wellness
+                      durationMinutes: 60
+                      imageUrl: http://localhost:3000/images/services/swedish-massage.jpg
+                    startsAt: '2030-05-06T10:00:00.000Z'
+                    endsAt: '2030-05-06T11:00:00.000Z'
+                    status: CONFIRMED
+                    price: 65
+                    note: null
+                    createdAt: '2030-05-01T08:00:00.000Z'
+                    cancelledAt: null
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 1
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /appointments/{id}:
+    get:
+      tags: [Appointments]
+      summary: Get one of your appointments
+      description: |
+        Another user's appointment, an unknown id and a malformed id all return the same
+        `404 NOT_FOUND`.
+      operationId: getAppointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The appointment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /appointments/{id}/cancel:
+    patch:
+      tags: [Appointments]
+      summary: Cancel a pending appointment
+      description: |
+        Allowed only while the appointment is `PENDING`. Confirmed, completed and already
+        cancelled appointments return `409 INVALID_STATUS_TRANSITION` and stay unchanged.
+        Cancelling frees the time slot. Another user's appointment is a `404`.
+      operationId: cancelAppointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The appointment, now `CANCELLED` with `cancelledAt` set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The appointment is not pending (`INVALID_STATUS_TRANSITION`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_STATUS_TRANSITION
+                  message: A confirmed appointment cannot be cancelled; only pending ones can
+
 components:
   securitySchemes:
     bearerAuth:
@@ -332,7 +574,7 @@ components:
       properties:
         page: { type: integer }
         limit: { type: integer }
-        total: { type: integer, description: Services matching the filters across all pages. }
+        total: { type: integer, description: Items matching the request across all pages. }
     ServiceResponse:
       type: object
       required: [success, data]
@@ -351,6 +593,90 @@ components:
             $ref: '#/components/schemas/Service'
         meta:
           $ref: '#/components/schemas/PageMeta'
+    AppointmentService:
+      type: object
+      required: [id, name, category, durationMinutes, imageUrl]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        category: { type: string }
+        durationMinutes: { type: integer }
+        imageUrl: { type: string, nullable: true }
+    Appointment:
+      type: object
+      required: [id, service, startsAt, endsAt, status, price, note, createdAt, cancelledAt]
+      properties:
+        id: { type: string, format: uuid }
+        service:
+          $ref: '#/components/schemas/AppointmentService'
+        startsAt: { type: string, format: date-time, description: UTC instant. }
+        endsAt: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, COMPLETED, CANCELLED]
+          description: |
+            PENDING becomes CONFIRMED automatically after a short delay, CONFIRMED becomes
+            COMPLETED once the end time passes, and PENDING can be cancelled. CANCELLED and
+            COMPLETED are final.
+        price: { type: number, description: 'Price when the booking was made, as a decimal amount.' }
+        note: { type: string, nullable: true, maxLength: 500 }
+        createdAt: { type: string, format: date-time }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+    CreateAppointmentRequest:
+      type: object
+      required: [serviceId, startsAt]
+      properties:
+        serviceId: { type: string, format: uuid }
+        startsAt:
+          type: string
+          format: date-time
+          description: ISO 8601 with a time zone offset or `Z`. Must be a slot start.
+        note: { type: string, maxLength: 500 }
+    AppointmentResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          $ref: '#/components/schemas/Appointment'
+    AppointmentListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Appointment'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    Slot:
+      type: object
+      required: [startsAt, endsAt, label, available]
+      properties:
+        startsAt: { type: string, format: date-time, description: UTC instant. }
+        endsAt: { type: string, format: date-time }
+        label: { type: string, description: 'Start time in the business time zone, as HH:mm.', example: '09:30' }
+        available: { type: boolean }
+    Availability:
+      type: object
+      required: [serviceId, date, timeZone, durationMinutes, slots]
+      properties:
+        serviceId: { type: string, format: uuid }
+        date: { type: string, format: date }
+        timeZone: { type: string, description: 'IANA zone the date and labels refer to.', example: UTC }
+        durationMinutes: { type: integer }
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Slot'
+    AvailabilityResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          $ref: '#/components/schemas/Availability'
     FieldError:
       type: object
       required: [field, message]
@@ -378,8 +704,19 @@ components:
                 $ref: '#/components/schemas/FieldError'
 
   responses:
+    Unauthenticated:
+      description: Missing, malformed, tampered or expired token (`UNAUTHENTICATED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: UNAUTHENTICATED
+              message: Authentication required
     NotFound:
-      description: The resource does not exist (`NOT_FOUND`). Used for unknown, inactive and malformed ids alike.
+      description: The resource does not exist (`NOT_FOUND`). Used for unknown, inactive, malformed and not-yours ids alike.
       content:
         application/json:
           schema:

@@ -1,7 +1,9 @@
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildTestApp } from './support/app';
+import { insertAppointment, insertUser, resetAppointments } from './support/appointments';
 import { insertCatalogue, resetServices } from './support/services';
+import { resetUsers } from './support/users';
 
 const { app, db } = buildTestApp(undefined, {
   env: { PUBLIC_BASE_URL: 'https://api.example.test/' },
@@ -261,14 +263,63 @@ describe('GET /services', () => {
   });
 
   describe('popular ordering', () => {
-    it('is accepted and, with no bookings yet, equals name ordering', async () => {
+    it('equals name ordering while nothing has been booked', async () => {
       const popular = await list('?sort=popular');
       const byName = await list('?sort=name');
       expect(popular.status).toBe(200);
-      expect(popular.body.data.map((s: { id: string }) => s.id)).toEqual(
-        byName.body.data.map((s: { id: string }) => s.id),
-      );
       expect(names(popular)).toEqual(names(byName));
+    });
+
+    describe('with bookings', () => {
+      let userId: string;
+      beforeAll(async () => {
+        await resetUsers(db);
+        userId = await insertUser(db);
+      });
+      afterEach(() => resetAppointments(db));
+      afterAll(() => resetUsers(db));
+
+      const book = (service: string, hour: number, status = 'PENDING') =>
+        insertAppointment(db, {
+          userId,
+          serviceId: ids[service] as string,
+          startsAt: `2030-05-06T${String(hour).padStart(2, '0')}:00:00Z`,
+          endsAt: `2030-05-06T${String(hour + 1).padStart(2, '0')}:00:00Z`,
+          status,
+        });
+
+      it('puts the service with more bookings first', async () => {
+        await book('laptop', 9);
+        await book('laptop', 10);
+        await book('laptop', 11, 'COMPLETED');
+        await book('haircut', 9);
+        await book('haircut', 10);
+        await book('manicure', 9);
+        const res = await list('?sort=popular');
+        expect(names(res).slice(0, 3)).toEqual(['Laptop Repair', 'Haircut & Styling', 'Manicure']);
+        // Unbooked services follow in name order.
+        expect(names(res)[3]).toBe('Deep Tissue Massage');
+      });
+
+      it('does not count cancelled bookings', async () => {
+        await book('laptop', 9, 'CANCELLED');
+        await book('laptop', 10, 'CANCELLED');
+        await book('laptop', 11, 'CANCELLED');
+        await book('manicure', 9);
+        const res = await list('?sort=popular');
+        expect(names(res)[0]).toBe('Manicure');
+        expect(names(res).indexOf('Laptop Repair')).toBeGreaterThan(0);
+      });
+
+      it('ignores the order parameter and keeps paging consistent', async () => {
+        await book('yoga', 9);
+        const asc = await list('?sort=popular&order=asc');
+        const desc = await list('?sort=popular&order=desc');
+        expect(names(asc)).toEqual(names(desc));
+        expect(names(asc)[0]).toBe('Private Yoga');
+        const page2 = await list('?sort=popular&limit=2&page=2');
+        expect(names(page2)).toEqual(names(asc).slice(2, 4));
+      });
     });
 
     it('works together with filters and paging', async () => {

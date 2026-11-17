@@ -10,12 +10,15 @@ export interface BuiltQuery {
  * key here and is never placed into the SQL text, so it cannot inject anything.
  * `id` is the final tie-breaker so paging is stable.
  */
+const POPULAR =
+  "(SELECT count(*) FROM appointments a WHERE a.service_id = services.id AND a.status <> 'CANCELLED') DESC, name ASC, id ASC";
+
 const ORDER_BY: Record<SortKey, Record<'asc' | 'desc', string>> = {
   name: { asc: 'name ASC, id ASC', desc: 'name DESC, id ASC' },
   price: { asc: 'price_cents ASC, name ASC, id ASC', desc: 'price_cents DESC, name ASC, id ASC' },
-  // Until bookings exist there is nothing to rank by, so popularity falls back to name
-  // order. The appointment-booking change replaces this with a booking count.
-  popular: { asc: 'name ASC, id ASC', desc: 'name ASC, id ASC' },
+  // Most-booked first, whatever `order` says: "popular" has no useful ascending form.
+  // Cancelled bookings do not count. Ties fall back to name order.
+  popular: { asc: POPULAR, desc: POPULAR },
 };
 
 /** Escapes LIKE wildcards so a search for "50%" matches the text "50%", not everything. */

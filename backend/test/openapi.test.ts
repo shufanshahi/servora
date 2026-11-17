@@ -25,6 +25,10 @@ describe('docs/openapi.yaml', () => {
         '/auth/login',
         '/services',
         '/services/{id}',
+        '/services/{id}/availability',
+        '/appointments',
+        '/appointments/{id}',
+        '/appointments/{id}/cancel',
       ]),
     );
     expect(Object.keys(paths['/services']?.get?.responses ?? {})).toEqual(
@@ -39,6 +43,39 @@ describe('docs/openapi.yaml', () => {
     expect(Object.keys(paths['/auth/login']?.post?.responses ?? {})).toEqual(
       expect.arrayContaining(['200', '401', '422', '429']),
     );
+  });
+
+  it('documents the booking endpoints with their error responses', async () => {
+    const api = await SwaggerParser.dereference(specPath);
+    const paths = api.paths as unknown as Record<
+      string,
+      Record<string, { responses: Record<string, unknown>; security?: unknown[] }>
+    >;
+    const codes = (path: string, method: string) =>
+      Object.keys(paths[path]?.[method]?.responses ?? {});
+    expect(codes('/services/{id}/availability', 'get')).toEqual(
+      expect.arrayContaining(['200', '404', '422']),
+    );
+    expect(codes('/appointments', 'post')).toEqual(
+      expect.arrayContaining(['201', '401', '404', '409', '422']),
+    );
+    expect(codes('/appointments', 'get')).toEqual(expect.arrayContaining(['200', '401', '422']));
+    expect(codes('/appointments/{id}', 'get')).toEqual(
+      expect.arrayContaining(['200', '401', '404']),
+    );
+    expect(codes('/appointments/{id}/cancel', 'patch')).toEqual(
+      expect.arrayContaining(['200', '401', '404', '409']),
+    );
+    // Every appointment operation needs a token; availability is public.
+    for (const [path, method] of [
+      ['/appointments', 'post'],
+      ['/appointments', 'get'],
+      ['/appointments/{id}', 'get'],
+      ['/appointments/{id}/cancel', 'patch'],
+    ] as const) {
+      expect(paths[path]?.[method]?.security, `${method} ${path}`).toEqual([{ bearerAuth: [] }]);
+    }
+    expect(paths['/services/{id}/availability']?.get?.security).toBeUndefined();
   });
 
   it('only mentions error codes that really exist', () => {
