@@ -134,7 +134,8 @@ demo password is public.
 and `limit` (1-50, default 20). Filters combine, only active services are ever returned, and the
 response carries `meta: { page, limit, total }`. Interactive documentation with examples is served
 at **`/docs`** (for example http://localhost:3000/docs), generated from
-[docs/openapi.yaml](docs/openapi.yaml).
+[docs/openapi.yaml](docs/openapi.yaml). The raw specification is at `/docs/openapi.json` and
+`/docs/openapi.yaml`, for importing into Postman or generating a client.
 
 ### Seeding the demo catalogue
 

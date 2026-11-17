@@ -92,8 +92,9 @@ describe('serving the service images', () => {
       for (const url of [
         '/package.json',
         '/src/server.ts',
-        '/docs/openapi.yaml',
+        '/openapi.yaml', // only the documented /docs/openapi.yaml route exists
         '/.env.example',
+        '/docs/../package.json',
       ]) {
         const res = await request(app).get(url);
         expect(res.status, url).toBe(404);

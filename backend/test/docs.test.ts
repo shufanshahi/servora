@@ -48,6 +48,35 @@ describe('GET /docs (Swagger UI)', () => {
     }
   });
 
+  it('answers only the documentation page itself, not arbitrary paths under /docs', async () => {
+    for (const url of ['/docs/nonsense', '/docs/../package.json', '/docs/openapi.txt']) {
+      const res = await request(app).get(url);
+      expect(res.status, url).toBe(404);
+      expect(res.headers['content-type'], url).toMatch(/application\/json/);
+      expect(res.body.error.code, url).toBe('NOT_FOUND');
+    }
+  });
+
+  it('serves the raw specification as YAML', async () => {
+    const res = await request(app).get('/docs/openapi.yaml');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/yaml/);
+    expect(res.text).toMatch(/^openapi: 3\.0\.3/m);
+    expect(res.text).toContain('/services/{id}');
+    expect(res.text).not.toContain('<html');
+  });
+
+  it('serves the raw specification as JSON with this deployment as its server', async () => {
+    const res = await request(app).get('/docs/openapi.json');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.body.openapi).toBe('3.0.3');
+    expect(res.body.servers).toEqual([
+      { url: 'https://api.example.test', description: 'This server' },
+    ]);
+    expect(Object.keys(res.body.paths)).toContain('/services');
+  });
+
   it('is generated from the OpenAPI file and points "Try it out" at this deployment', async () => {
     const init = (await request(app).get('/docs/swagger-ui-init.js')).text;
     expect(init).toContain('Servora API');
