@@ -23,8 +23,11 @@ From this folder:
 
 ```bash
 cp backend/.env.example backend/.env   # once: the API needs a JWT_SECRET (see below)
-docker compose up --build        # PostgreSQL + API, migrations applied automatically
+docker compose up -d --build --wait   # PostgreSQL + API in the background, migrations applied
+docker compose exec api npm run seed:prod   # once: fill the service catalogue (and demo user)
 curl http://localhost:3000/health
+curl "http://localhost:3000/services?q=massage"
+# interactive API docs: http://localhost:3000/docs
 docker compose down              # stop (add -v to also delete the database volume)
 ```
 
@@ -40,7 +43,7 @@ definition of every service and nothing to keep in sync.
 
 ```bash
 cd backend
-docker compose up --build        # same stack, started from the backend folder
+docker compose up -d --build --wait   # same stack, started from the backend folder
 ```
 
 See [backend/README.md](backend/README.md) for running the API with `npm run dev`, tests,

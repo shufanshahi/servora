@@ -17,6 +17,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY src/db/migrations ./src/db/migrations
+# Service images and the OpenAPI document served at /docs.
+COPY public ./public
+COPY docs ./docs
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Run as the unprivileged user that ships with the node image.

@@ -15,6 +15,8 @@ tags:
   - name: Health
   - name: Auth
     description: Registration and login. Both are rate limited per client IP.
+  - name: Services
+    description: The public service catalogue. No token needed.
 
 paths:
   /health:
@@ -139,6 +141,112 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /services:
+    get:
+      tags: [Services]
+      summary: List and search services
+      description: |
+        Public (no token needed). Returns active services, 20 per page by default, ordered by
+        name. Filters combine with AND. `sort=popular` currently orders by name until bookings
+        exist to rank by.
+      operationId: listServices
+      parameters:
+        - name: q
+          in: query
+          description: Case-insensitive text search over name and description. `%` and `_` are plain characters.
+          schema: { type: string, maxLength: 100 }
+          example: massage
+        - name: category
+          in: query
+          description: Exact category, case-insensitive.
+          schema: { type: string, maxLength: 50 }
+          example: Wellness
+        - name: minPrice
+          in: query
+          description: Lowest price, inclusive.
+          schema: { type: number, minimum: 0 }
+          example: 40
+        - name: maxPrice
+          in: query
+          description: Highest price, inclusive. Must not be below `minPrice`.
+          schema: { type: number, minimum: 0 }
+          example: 70
+        - name: featured
+          in: query
+          description: "`true` for featured services only, `false` for the rest."
+          schema: { type: boolean }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [name, price, popular], default: name }
+        - name: order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: asc }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          description: Page size (1-50).
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: A page of services. An empty `data` array with `total` 0 means nothing matched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceListResponse'
+              example:
+                success: true
+                data:
+                  - id: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+                    name: Swedish Massage
+                    description: A relaxing full-body massage using long, flowing strokes to ease muscle tension, improve circulation and calm the mind. Suitable for first-time clients.
+                    price: 65
+                    durationMinutes: 60
+                    category: Wellness
+                    imageUrl: http://localhost:3000/images/services/swedish-massage.jpg
+                    isFeatured: true
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 1
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /services/{id}:
+    get:
+      tags: [Services]
+      summary: Get one service
+      description: |
+        Public (no token needed). Unknown, inactive and malformed ids all return the same
+        `404 NOT_FOUND`.
+      operationId: getService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The complete service.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceResponse'
+              example:
+                success: true
+                data:
+                  id: 5b2a4c1e-8f3d-4e7a-9c11-2d6f0a7b3e90
+                  name: Swedish Massage
+                  description: A relaxing full-body massage using long, flowing strokes to ease muscle tension, improve circulation and calm the mind. Suitable for first-time clients.
+                  price: 65
+                  durationMinutes: 60
+                  category: Wellness
+                  imageUrl: http://localhost:3000/images/services/swedish-massage.jpg
+                  isFeatured: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -200,6 +308,49 @@ components:
             expiresAt:
               type: string
               format: date-time
+    Service:
+      type: object
+      required: [id, name, description, price, durationMinutes, category, imageUrl, isFeatured]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        price:
+          type: number
+          description: Decimal amount, for example 65 or 49.99.
+        durationMinutes: { type: integer, description: Estimated length of the appointment. }
+        category: { type: string }
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Absolute URL of the service image, or null if it has none.
+        isFeatured: { type: boolean }
+    PageMeta:
+      type: object
+      required: [page, limit, total]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer, description: Services matching the filters across all pages. }
+    ServiceResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          $ref: '#/components/schemas/Service'
+    ServiceListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
     FieldError:
       type: object
       required: [field, message]
@@ -227,6 +378,17 @@ components:
                 $ref: '#/components/schemas/FieldError'
 
   responses:
+    NotFound:
+      description: The resource does not exist (`NOT_FOUND`). Used for unknown, inactive and malformed ids alike.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: Service not found
     ValidationError:
       description: Input failed validation (`VALIDATION_ERROR`), with one entry per field.
       content:

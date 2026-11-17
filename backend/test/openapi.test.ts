@@ -19,7 +19,19 @@ describe('docs/openapi.yaml', () => {
       Record<string, { responses: Record<string, unknown> }>
     >;
     expect(Object.keys(paths)).toEqual(
-      expect.arrayContaining(['/health', '/auth/register', '/auth/login']),
+      expect.arrayContaining([
+        '/health',
+        '/auth/register',
+        '/auth/login',
+        '/services',
+        '/services/{id}',
+      ]),
+    );
+    expect(Object.keys(paths['/services']?.get?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '422']),
+    );
+    expect(Object.keys(paths['/services/{id}']?.get?.responses ?? {})).toEqual(
+      expect.arrayContaining(['200', '404']),
     );
     expect(Object.keys(paths['/auth/register']?.post?.responses ?? {})).toEqual(
       expect.arrayContaining(['201', '409', '422', '429']),

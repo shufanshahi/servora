@@ -50,7 +50,7 @@ Migrations enable the `citext` and `btree_gist` extensions. The test suite uses 
 
 ```bash
 cp .env.example .env         # once: provides the required JWT_SECRET to Docker Compose
-docker compose up --build    # PostgreSQL + API on http://localhost:3000, migrations applied on start
+docker compose up -d --build --wait   # PostgreSQL + API on http://localhost:3000, migrations applied on start
 docker compose down          # stop (add -v to delete the database volume)
 ```
 
@@ -122,12 +122,64 @@ npm run seed    # creates or resets demo@servora.test / Demo1234
 The seed is safe to run repeatedly. It refuses to run when `NODE_ENV=production` because the
 demo password is public.
 
+## Service catalogue
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /services` | List and search services (public, no token) |
+| `GET /services/:id` | One service (public, no token) |
+
+`GET /services` accepts: `q` (text search over name and description), `category`, `minPrice`,
+`maxPrice`, `featured`, `sort` (`name`, `price` or `popular`), `order` (`asc` or `desc`), `page`
+and `limit` (1-50, default 20). Filters combine, only active services are ever returned, and the
+response carries `meta: { page, limit, total }`. Interactive documentation with examples is served
+at **`/docs`** (for example http://localhost:3000/docs), generated from
+[docs/openapi.yaml](docs/openapi.yaml).
+
+### Seeding the demo catalogue
+
+The database starts empty. Fill it with ten demo services (four categories, durations of 30, 45,
+60 and 90 minutes, four of them featured):
+
+```bash
+# API running on your machine (needs PostgreSQL up and backend/.env, see Setup)
+npm run seed
+
+# API running in Docker
+docker compose exec api npm run seed:prod
+```
+
+The seed is **idempotent**: services are matched by name and updated in place, so you can run it as
+often as you like and it never creates duplicates or changes ids. It also resets any service you
+edited back to the catalogue values and re-activates it. It creates the demo user too (see
+[Authentication](#authentication)), except when `NODE_ENV=production`: services are still seeded
+there, but the demo user is skipped unless you set `SEED_ALLOW_PRODUCTION=true`.
+
+### Images
+
+- Images live in `public/images/services/` and are served by the API at
+  `/images/services/<name>.jpg`. Only the relative path is stored in the database
+  (`services.image_path`); the absolute `imageUrl` in responses is built from `PUBLIC_BASE_URL`.
+  **When you host the API, set `PUBLIC_BASE_URL` to its public address** or clients will be given
+  `localhost` links.
+- They are small on purpose: 800 x 600 JPEG, under 150 KB each, so the repository stays light.
+- Every image is a photograph from [Wikimedia Commons](https://commons.wikimedia.org/) used under
+  its licence. Authors, licences and links to the original files are in
+  [public/images/services/ATTRIBUTION.md](public/images/services/ATTRIBUTION.md). A test fails if an
+  image has no attribution entry or an unsuitable licence.
+- **To add or replace an image:** choose a photo whose licence allows reuse (public domain, CC0,
+  CC BY or CC BY-SA, never non-commercial or no-derivatives); crop it to 4:3 and save it as an
+  800 x 600 JPEG under 150 KB in `public/images/services/`; add or update the service in
+  `src/db/seed-services.ts`; add a row to `ATTRIBUTION.md`; run `npm test` and `npm run seed`.
+
 ## Check it works
 
 ```bash
 npm run dev
 curl http://localhost:3000/health
 # {"success":true,"data":{"status":"ok","uptimeSeconds":1}}
+npm run seed                                  # fill the catalogue (once)
+curl "http://localhost:3000/services?q=massage"
 ```
 
 ## Configuration
@@ -190,6 +242,8 @@ this table; a test fails if the table and `src/http/errors.ts` ever disagree.
 ## Layout
 
 ```
+public/        static files served by the API (service images and their attribution)
+docs/          openapi.yaml, the source of the interactive docs at /docs
 src/
   config/      validated environment configuration
   http/        Express app, routes, middleware, response helpers
