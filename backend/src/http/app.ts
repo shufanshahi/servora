@@ -1,9 +1,11 @@
 import express, { type Express } from 'express';
 import type { Config } from '../config';
+import type { Db } from '../db/pool';
 import { routes } from './routes';
 
 export interface AppDeps {
   config: Config;
+  db: Db;
 }
 
 /** Builds the Express app. Kept separate from server bootstrap so tests can import it. */
