@@ -1,0 +1,13 @@
+{
+    "success": true,
+    "data": {
+        "id": "cdb32d78-22f3-4f11-b514-2729b6f84c0d",
+        "name": "Deep Tissue Massage",
+        "description": "Firm, focused pressure that works into the deeper layers of muscle to release chronic knots and tension in the back, neck and shoulders.",
+        "price": 95,
+        "durationMinutes": 90,
+        "category": "Wellness",
+        "imageUrl": "http://localhost:3000/images/services/deep-tissue-massage.jpg",
+        "isFeatured": false
+    }
+}

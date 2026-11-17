@@ -120,3 +120,60 @@ class AdaptiveGrid extends StatelessWidget {
     );
   }
 }
+
+/// Sliver version of [AdaptiveGrid]: a lazily built list of [itemCount] tiles that is a
+/// single column on phones and adds columns as the screen widens. Tiles in a row share
+/// the height of the tallest, and may be any height (text can grow with the user's font
+/// size without overflowing). Put it inside a `CustomScrollView`, usually wrapped in a
+/// `SliverPadding` that sets the page margins.
+class SliverAdaptiveGrid extends StatelessWidget {
+  const SliverAdaptiveGrid({
+    required this.itemCount,
+    required this.itemBuilder,
+    super.key,
+    this.minTileWidth = 320,
+    this.spacing = AppSpacing.md,
+  });
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final double minTileWidth;
+  final double spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final columns = gridColumnsFor(
+          constraints.crossAxisExtent,
+          minTileWidth: minTileWidth,
+          spacing: spacing,
+        );
+        final rows = (itemCount / columns).ceil();
+
+        return SliverList.separated(
+          itemCount: rows,
+          separatorBuilder: (_, _) => SizedBox(height: spacing),
+          itemBuilder: (context, row) {
+            if (columns == 1) return itemBuilder(context, row);
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < columns; i++) ...[
+                    if (i > 0) SizedBox(width: spacing),
+                    Expanded(
+                      child: row * columns + i < itemCount
+                          ? itemBuilder(context, row * columns + i)
+                          : const SizedBox(),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}

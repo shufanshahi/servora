@@ -7,6 +7,7 @@ import 'package:servora/core/router/placeholder_pages.dart';
 import 'package:servora/core/router/routes.dart';
 import 'package:servora/features/auth/presentation/login_screen.dart';
 import 'package:servora/features/auth/presentation/register_screen.dart';
+import 'package:servora/features/services/presentation/home_screen.dart';
 
 /// Decides where a user may go. Pure function so it can be unit tested.
 ///
@@ -52,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (_, _) => const HomePlaceholderPage(),
+                builder: (_, _) => const HomeScreen(),
               ),
             ],
           ),

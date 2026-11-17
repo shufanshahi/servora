@@ -64,7 +64,7 @@ void main() {
       await tester.pumpWidget(servoraApp(status: AuthStatus.authenticated));
       await tester.pumpAndSettle();
       expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.text('Placeholder service 1'), findsOneWidget);
+      expect(find.text('Find a service'), findsOneWidget);
     });
 
     testWidgets('the session-restoring state shows the splash', (tester) async {
@@ -103,7 +103,10 @@ void main() {
           .position
           .pixels;
 
-      await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, -900),
+      );
       await tester.pumpAndSettle();
       final scrolledTo = homeOffset();
       expect(scrolledTo, greaterThan(500));
@@ -112,7 +115,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('No bookings yet'), findsOneWidget);
 
-      await tester.tap(find.text('Home'));
+      await tester.tap(navTab('Home'));
       await tester.pumpAndSettle();
       expect(homeOffset(), scrolledTo);
     });
@@ -122,9 +125,9 @@ void main() {
     ) async {
       await tester.pumpWidget(servoraApp(status: AuthStatus.authenticated));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Home'));
+      await tester.tap(navTab('Home'));
       await tester.pumpAndSettle();
-      expect(find.text('Placeholder service 1'), findsOneWidget);
+      expect(find.text('Find a service'), findsOneWidget);
     });
   });
 }

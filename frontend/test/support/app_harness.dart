@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show NavigationBar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -7,8 +10,34 @@ import 'package:servora/core/session/session_notifier.dart';
 import 'package:servora/core/session/session_state.dart';
 import 'package:servora/core/session/token_store.dart';
 
+import 'package:servora/features/services/data/services_repository.dart';
+import 'package:servora/features/services/presentation/services_providers.dart';
+import 'package:servora/features/services/presentation/widgets/service_image.dart';
+
+import 'fake_services_repository.dart';
 import 'fake_token_store.dart';
 import 'fixtures.dart';
+import 'service_fixtures.dart';
+
+/// A one-pixel PNG, so screens can show an image without any network or plugin.
+final _pixel = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
+
+/// Overrides that keep the Home tab off the network: the ten real services from a fake
+/// repository, in-memory images and a short search debounce.
+List<Override> serviceOverrides({
+  ServicesRepository? repository,
+  ServiceImageProviderFactory? imageFactory,
+}) => [
+  servicesRepositoryProvider.overrideWithValue(
+    repository ?? FakeServicesRepository(realServices()),
+  ),
+  serviceImageProviderFactoryProvider.overrideWithValue(
+    imageFactory ?? (url) => MemoryImage(_pixel),
+  ),
+  searchDebounceProvider.overrideWithValue(const Duration(milliseconds: 20)),
+];
 
 /// A session that is exactly [initial] and never restores from storage, so a test
 /// can start in any state without waiting.
@@ -36,11 +65,17 @@ Widget servoraApp({
   AuthStatus status = AuthStatus.unauthenticated,
   SessionState? session,
   List<Override> overrides = const [],
+  ServicesRepository? servicesRepository,
+  ServiceImageProviderFactory? imageFactory,
 }) {
   return ProviderScope(
     overrides: [
       sessionProvider.overrideWith(
         () => _FixedSession(session ?? sessionFor(status)),
+      ),
+      ...serviceOverrides(
+        repository: servicesRepository,
+        imageFactory: imageFactory,
       ),
       ...overrides,
     ],
@@ -53,9 +88,18 @@ Widget servoraApp({
 Widget servoraAppWithRealSession(
   FakeTokenStore store, {
   List<Override> overrides = const [],
+  ServicesRepository? servicesRepository,
+  ServiceImageProviderFactory? imageFactory,
 }) {
   return ProviderScope(
-    overrides: [tokenStoreProvider.overrideWithValue(store), ...overrides],
+    overrides: [
+      tokenStoreProvider.overrideWithValue(store),
+      ...serviceOverrides(
+        repository: servicesRepository,
+        imageFactory: imageFactory,
+      ),
+      ...overrides,
+    ],
     child: const ServoraApp(),
   );
 }
@@ -76,3 +120,9 @@ void useScreen(
     tester.platformDispatcher.clearTextScaleFactorTestValue();
   });
 }
+
+/// A bottom-navigation tab, found by its label. Use this instead of `find.text` when
+/// tapping tabs: a screen can contain the same word elsewhere (the Home tab and the
+/// "Home" category chip, for instance).
+Finder navTab(String label) =>
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));

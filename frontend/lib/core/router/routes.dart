@@ -9,6 +9,10 @@ abstract final class AppRoutes {
   static const assistant = '/assistant';
   static const profile = '/profile';
 
+  /// A service's detail page, and the start of booking it.
+  static String serviceDetail(String id) => '/services/$id';
+  static String serviceBook(String id) => '/services/$id/book';
+
   /// Routes a signed-out user may open.
   static const publicRoutes = {splash, login, register};
 }

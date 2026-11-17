@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/layout/responsive.dart';
 import 'package:servora/core/session/session_notifier.dart';
-import 'package:servora/core/widgets/app_card.dart';
 import 'package:servora/core/widgets/empty_view.dart';
 import 'package:servora/core/widgets/loading_view.dart';
 
@@ -18,29 +17,6 @@ class SplashPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const Scaffold(body: LoadingView(message: 'Starting Servora'));
-}
-
-/// Home placeholder: a long adaptive grid so scroll preservation can be tested.
-class HomePlaceholderPage extends StatelessWidget {
-  const HomePlaceholderPage({super.key, this.controller});
-
-  final ScrollController? controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AdaptiveGrid(
-      controller: controller,
-      children: [
-        for (var i = 1; i <= 40; i++)
-          AppCard(
-            child: Text(
-              'Placeholder service $i',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-      ],
-    );
-  }
 }
 
 class BookingsPlaceholderPage extends StatelessWidget {
