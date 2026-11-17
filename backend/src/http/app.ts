@@ -1,4 +1,5 @@
 import cors from 'cors';
+import path from 'node:path';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { Config } from '../config';
@@ -17,6 +18,9 @@ export interface AppDeps {
 }
 
 const JSON_BODY_LIMIT = '100kb';
+
+/** Static files (service images). Resolves to backend/public from both src/ and dist/. */
+const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 
 /** Builds the Express app. Kept separate from server bootstrap so tests can import it. */
 export function createApp(deps: AppDeps): Express {
@@ -37,6 +41,18 @@ export function createApp(deps: AppDeps): Express {
       // browsers are limited to the configured allowlist.
       origin: (origin, callback) =>
         callback(null, origin === undefined || config.CORS_ORIGINS.includes(origin)),
+    }),
+  );
+  app.use(
+    express.static(PUBLIC_DIR, {
+      index: false, // never produce a directory page
+      redirect: false, // a bare directory path is a plain JSON 404, not an HTML redirect
+      dotfiles: 'ignore', // .env and friends are invisible
+      maxAge: '1d',
+      setHeaders: (res) => {
+        // helmet defaults to same-origin; images are meant to be embeddable by clients.
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      },
     }),
   );
   app.use(express.json({ limit: JSON_BODY_LIMIT }));

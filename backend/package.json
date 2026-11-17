@@ -15,7 +15,8 @@
     "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js up -m src/db/migrations -j sql",
     "migrate:down": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js down -m src/db/migrations -j sql",
     "migrate:create": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js create -m src/db/migrations -j sql --migration-filename-format utc",
-    "seed": "tsx src/db/seed.ts"
+    "seed": "tsx src/db/seed.ts",
+    "seed:prod": "node dist/db/seed.js"
   },
   "type": "commonjs",
   "dependencies": {
@@ -28,6 +29,8 @@
     "jsonwebtoken": "^9.0.3",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.1",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -40,6 +43,7 @@
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
+    "@types/swagger-ui-express": "^4.1.8",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.10.1",
