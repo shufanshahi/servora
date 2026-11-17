@@ -1,0 +1,258 @@
+openapi: 3.0.3
+info:
+  title: Servora API
+  version: 0.1.0
+  description: |
+    REST API for Servora, a service booking and management app.
+
+    Every response is JSON. Successful responses use `{ "success": true, "data": ... }`
+    (list responses add `meta`); failures use `{ "success": false, "error": { ... } }`.
+    Protected routes need an `Authorization: Bearer <accessToken>` header.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+    description: Registration and login. Both are rate limited per client IP.
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      operationId: getHealth
+      responses:
+        '200':
+          description: The API is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: ok }
+                      uptimeSeconds: { type: integer, example: 42 }
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Create an account
+      description: |
+        Creates a user and signs them in. Emails are compared case-insensitively.
+        Passwords need at least 8 characters, a letter and a number (72 bytes at most).
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              name: Ada Lovelace
+              email: ada@example.com
+              password: Sup3rSecret
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                data:
+                  user:
+                    id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
+                    name: Ada Lovelace
+                    email: ada@example.com
+                    createdAt: '2026-11-17T10:00:00.000Z'
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjBjLi4uIn0.signature
+                  expiresAt: '2026-11-24T10:00:00.000Z'
+        '409':
+          description: An account with this email already exists (`EMAIL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: EMAIL_TAKEN
+                  message: An account with this email already exists
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in
+      description: |
+        Returns an access token valid for 7 days. A wrong password and an unknown email
+        produce the same `INVALID_CREDENTIALS` response, so registered emails are not revealed.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: ada@example.com
+              password: Sup3rSecret
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                data:
+                  user:
+                    id: 3f0c9f2e-6a7c-4b0e-9a55-1d2f6e8a1c11
+                    name: Ada Lovelace
+                    email: ada@example.com
+                    createdAt: '2026-11-17T10:00:00.000Z'
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzZjBjLi4uIn0.signature
+                  expiresAt: '2026-11-24T10:00:00.000Z'
+        '401':
+          description: Wrong email or password (`INVALID_CREDENTIALS`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Incorrect email or password
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token from `/auth/register` or `/auth/login`. Missing, malformed, tampered
+        or expired tokens get `401 UNAUTHENTICATED`.
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Ada Lovelace
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          example: ada@example.com
+        password:
+          type: string
+          minLength: 8
+          description: At least 8 characters with a letter and a number; at most 72 bytes.
+          example: Sup3rSecret
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, example: ada@example.com }
+        password: { type: string, example: Sup3rSecret }
+    User:
+      type: object
+      required: [id, name, email, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time }
+    AuthResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: object
+          required: [user, accessToken, expiresAt]
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            accessToken:
+              type: string
+              description: 'JWT to send as `Authorization: Bearer <accessToken>`.'
+            expiresAt:
+              type: string
+              format: date-time
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field: { type: string, example: password }
+        message: { type: string, example: Password must contain a number }
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable code (see the README error table).
+              example: VALIDATION_ERROR
+            message: { type: string }
+            details:
+              type: array
+              description: Present for validation failures.
+              items:
+                $ref: '#/components/schemas/FieldError'
+
+  responses:
+    ValidationError:
+      description: Input failed validation (`VALIDATION_ERROR`), with one entry per field.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Validation failed
+              details:
+                - field: password
+                  message: Password must contain a number
+    RateLimited:
+      description: Too many register/login attempts from this IP (`RATE_LIMITED`).
+      headers:
+        Retry-After:
+          description: Seconds to wait before trying again.
+          schema: { type: integer }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: RATE_LIMITED
+              message: Too many requests, please try again later

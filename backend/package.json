@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js up -m src/db/migrations -j sql",
     "migrate:down": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js down -m src/db/migrations -j sql",
-    "migrate:create": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js create -m src/db/migrations -j sql --migration-filename-format utc"
+    "migrate:create": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate.js create -m src/db/migrations -j sql --migration-filename-format utc",
+    "seed": "tsx src/db/seed.ts"
   },
   "type": "commonjs",
   "dependencies": {
