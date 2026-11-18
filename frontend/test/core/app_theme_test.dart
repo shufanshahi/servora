@@ -19,12 +19,10 @@ void main() {
       ),
     );
 
-    // Colour scheme is derived from the brand seed.
+    // The scheme is derived from the brand seed, with the brand primary on top.
     expect(theme.useMaterial3, isTrue);
-    expect(
-      theme.colorScheme.primary,
-      ColorScheme.fromSeed(seedColor: AppColors.seed).primary,
-    );
+    expect(theme.colorScheme.primary, AppColors.primary);
+    expect(theme.colorScheme.secondary, AppColors.gold);
     expect(theme.scaffoldBackgroundColor, AppColors.background);
     expect(theme.colorScheme.error, AppColors.error);
 

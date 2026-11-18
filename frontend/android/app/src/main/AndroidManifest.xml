@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required in release builds: the app talks to the Servora API over the network. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
+        android:usesCleartextTraffic="true"
         android:label="Servora"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

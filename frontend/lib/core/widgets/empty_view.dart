@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/theme/app_spacing.dart';
 import 'package:servora/core/widgets/app_button.dart';
 import 'package:servora/core/widgets/centered_scroll.dart';
+import 'package:servora/core/widgets/motion.dart';
+import 'package:servora/core/widgets/state_icon.dart';
 
 /// Shown when a load succeeded but there is nothing to display.
 class EmptyView extends StatelessWidget {
@@ -26,38 +28,40 @@ class EmptyView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return CenteredScroll(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 56, color: theme.colorScheme.outline),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: AppSpacing.sm),
+      child: FadeSlideIn(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StateIcon(icon: icon),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                message!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                title,
+                style: theme.textTheme.headlineSmall?.copyWith(fontSize: 22),
                 textAlign: TextAlign.center,
               ),
+              if (message != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  message!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                AppButton(
+                  label: actionLabel!,
+                  onPressed: onAction,
+                  variant: AppButtonVariant.secondary,
+                  expand: false,
+                ),
+              ],
             ],
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              AppButton(
-                label: actionLabel!,
-                onPressed: onAction,
-                variant: AppButtonVariant.secondary,
-                expand: false,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

@@ -132,8 +132,13 @@ void main() {
           tester.getRect(find.byType(TextField)).right,
           lessThanOrEqualTo(320),
         );
-        // The chip row scrolls sideways, so the last chip can be brought into view.
-        final lastChip = find.widgetWithText(ChoiceChip, 'Wellness');
+        // The chip row scrolls sideways (and the page down), so the last chip can be
+        // brought into view.
+        final lastChip = find.widgetWithText(
+          ChoiceChip,
+          'Wellness',
+          skipOffstage: false,
+        );
         await tester.ensureVisible(lastChip);
         await tester.pump();
         expect(tester.takeException(), isNull);

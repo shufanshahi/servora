@@ -40,8 +40,17 @@ Finder field(String label) => find.widgetWithText(TextFormField, label);
 String textOf(WidgetTester tester, String label) =>
     tester.widget<TextFormField>(field(label)).controller!.text;
 
-Future<void> scrollTo(WidgetTester tester, Finder finder) => tester
-    .scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
+/// Scrolls until [finder] is built, then brings it fully into view (it may first
+/// appear only partly, under the floating navigation bar).
+Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
 
 Finder button(String label) => find.widgetWithText(FilledButton, label);
 final saveButton = button('Save changes');

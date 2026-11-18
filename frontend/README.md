@@ -185,6 +185,28 @@ Verified on an Android emulator against the real API: an edited name and phone a
 profile screen at once, were still there after force-stopping and relaunching the app, and matched
 what the server returns.
 
+## Run the web build in Docker
+
+The same Flutter code also builds for the browser. The [`Dockerfile`](Dockerfile) installs the
+Flutter SDK, runs `flutter build web` and serves the result with nginx.
+
+```bash
+cd frontend
+docker compose up -d --build        # http://localhost:8080
+docker compose down
+```
+
+The app needs the API, so start the backend too (`cd ../backend && docker compose up -d --wait`),
+or run everything from the repository root. The API address is compiled in, and it is the one
+the *browser* uses:
+
+```bash
+API_BASE_URL=http://localhost:3000 docker compose up -d --build   # the default
+```
+
+Rebuild the image after changing it. The backend must allow the web origin in `CORS_ORIGINS`
+(`http://localhost:8080` is allowed by default). Use `WEB_HOST_PORT` to change the port.
+
 ## Tests and checks
 
 ```bash
@@ -200,6 +222,10 @@ With the Android SDK installed:
 flutter build apk --release --dart-define=API_BASE_URL=https://<your-host>
 # -> build/app/outputs/flutter-apk/app-release.apk
 ```
+
+A ready-made build for the emulator is committed at [`../apk/servora.apk`](../apk). The release
+manifest declares the `INTERNET` permission and allows plain `http://` so a local backend works;
+use HTTPS for a real deployment and remove `android:usesCleartextTraffic`.
 
 The first build downloads Gradle and the Android dependencies and can take a long time; later
 builds are much faster. Install the APK on a device or emulator with

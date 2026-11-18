@@ -74,21 +74,12 @@ describe('ATTRIBUTION.md', () => {
     });
 
     it('has a licence that permits reuse, with a link', () => {
-      expect(licence).toMatch(/\[(CC0|Public domain|CC BY \d\.\d|CC BY-SA \d\.\d)\]\(https:\/\//);
+      expect(licence).toMatch(/^\[Unsplash License\]\(https:\/\/unsplash\.com\/license\)$/);
     });
 
-    it('links to the source page on Wikimedia Commons', () => {
-      expect(source).toMatch(/^<https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+    it('links to the original photo on Unsplash', () => {
+      expect(source).toMatch(/^<https:\/\/images\.unsplash\.com\/photo-[0-9a-f-]+>$/);
     });
-  });
-
-  it('flags every share-alike image in the licence notes', () => {
-    const shareAlike = [...entries.entries()]
-      .filter(([, cells]) => /CC BY-SA/.test(cells[4] ?? ''))
-      .map(([file]) => file);
-    expect(shareAlike.length).toBeGreaterThan(0);
-    for (const file of shareAlike) expect(text).toContain(`\`${file}\``);
-    expect(text).toMatch(/must also be shared under CC BY-SA/);
   });
 
   it('states that the images were modified', () => {

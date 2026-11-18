@@ -57,11 +57,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Pushed above the tab bar, so Back returns to wherever the user was.
       GoRoute(
         path: '/services/:id',
-        builder: (_, state) => ServiceDetailScreen(
-          serviceId: state.pathParameters['id']!,
-          // The tapped list item, so the page can show at once (null for a direct link).
-          initial: state.extra is Service ? state.extra! as Service : null,
-        ),
+        builder: (_, state) {
+          final extra = state.extra;
+          return ServiceDetailScreen(
+            serviceId: state.pathParameters['id']!,
+            // The tapped list item, so the page can show at once (null for a direct
+            // link), and which picture it flies from.
+            initial: extra is ServiceDetailExtra
+                ? extra.service
+                : extra is Service
+                ? extra
+                : null,
+            heroScope: extra is ServiceDetailExtra ? extra.heroScope : 'list',
+          );
+        },
         routes: [
           GoRoute(
             path: 'book',

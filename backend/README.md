@@ -60,7 +60,7 @@ compose file is for local use; a real deployment sets `NODE_ENV=production` and 
 
 The API image is multi-stage, runs as a non-root user, and contains no secrets: configuration
 arrives only through environment variables. The same stack also starts from the repository
-root (`docker compose up -d --build --wait` there).
+root (`docker compose up -d --build --wait` there), where the web app is started with it.
 
 ## Tests
 
@@ -333,7 +333,7 @@ message if a required value is missing. See [`.env.example`](.env.example).
 | `DATABASE_URL` | yes | - | PostgreSQL connection string |
 | `PORT` | no | `3000` | HTTP port |
 | `NODE_ENV` | no | `development` | `development`, `test` or `production` |
-| `CORS_ORIGINS` | no | empty | Comma-separated allowed browser origins |
+| `CORS_ORIGINS` | no | empty | Comma-separated allowed browser origins (the Docker compose default allows the web app, `http://localhost:8080`) |
 | `JWT_SECRET` | **yes** | - | Signs login tokens. At least 32 random characters; the API refuses to start otherwise |
 | `JWT_EXPIRES_IN_SECONDS` | no | `604800` (7 days) | How long a login token stays valid |
 | `BCRYPT_COST` | no | `12` | bcrypt work factor for password hashing (4-15) |

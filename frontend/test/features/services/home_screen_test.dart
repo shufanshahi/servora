@@ -236,7 +236,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(RefreshProgressIndicator), findsNothing);
-      expect(find.textContaining("Can't reach the server"), findsOneWidget);
+      // Below the Featured row, so it may be just under the fold.
+      expect(
+        find.textContaining("Can't reach the server", skipOffstage: false),
+        findsOneWidget,
+      );
     });
   });
 

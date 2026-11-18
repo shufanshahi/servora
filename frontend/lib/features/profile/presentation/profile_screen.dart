@@ -2,15 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:servora/core/domain/app_user.dart';
 import 'package:servora/core/layout/responsive.dart';
 import 'package:servora/core/session/session_notifier.dart';
 import 'package:servora/core/session/session_state.dart';
+import 'package:servora/core/theme/app_colors.dart';
 import 'package:servora/core/theme/app_spacing.dart';
+import 'package:servora/core/widgets/app_card.dart';
 import 'package:servora/core/widgets/app_button.dart';
 import 'package:servora/core/widgets/app_text_field.dart';
+import 'package:servora/core/widgets/brand_mark.dart';
 import 'package:servora/core/widgets/message_banner.dart';
+import 'package:servora/core/widgets/motion.dart';
 import 'package:servora/features/auth/domain/auth_validators.dart';
 import 'package:servora/features/profile/domain/profile_validators.dart';
 import 'package:servora/features/profile/presentation/profile_controller.dart';
@@ -32,6 +37,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _current = TextEditingController();
   final _next = TextEditingController();
   bool _changingPassword = false;
+  final _securityKey = GlobalKey();
+
+  /// Shows the change-password form and scrolls it fully into view, so its
+  /// buttons are not left under the navigation bar.
+  void _openPasswordForm() {
+    setState(() => _changingPassword = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _securityKey.currentContext;
+      if (target == null || !mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          target,
+          duration: reduceMotion(context) ? Duration.zero : AppMotion.medium,
+          curve: AppMotion.emphasized,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ),
+      );
+    });
+  }
 
   AppUser? get _user {
     final session = ref.read(sessionProvider);
@@ -131,161 +155,248 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final passwordController = ref.read(passwordControllerProvider.notifier);
     final theme = Theme.of(context);
 
-    return MaxContentWidth(
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          Semantics(
-            header: true,
-            child: Text('Profile', style: theme.textTheme.headlineSmall),
+    return SafeArea(
+      bottom: false,
+      child: MaxContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenGutter,
+            AppSpacing.md,
+            AppSpacing.screenGutter,
+            AppSpacing.xl,
           ),
-          const SizedBox(height: AppSpacing.md),
-          if (user != null) _Header(user: user),
-          const SizedBox(height: AppSpacing.lg),
-          Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (profile.failure != null) ...[
-                  MessageBanner(
-                    message: profile.failure!.userMessage,
-                    onRetry: profile.failure!.isRetryable && !profile.isSaving
-                        ? () => unawaited(_save())
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-                AppTextField(
-                  label: 'Name',
-                  controller: _name,
-                  keyboardType: TextInputType.name,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.name],
-                  validator: AuthValidators.name,
-                  errorText: profile.fieldErrors['name'],
-                  onChanged: (_) => profileController.clearFieldError('name'),
-                  enabled: !profile.isSaving,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  label: 'Email',
-                  controller: _email,
-                  enabled: false,
-                  hintText: 'Your email cannot be changed',
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppTextField(
-                  label: 'Phone (optional)',
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+()\-. ]')),
-                  ],
-                  validator: ProfileValidators.phone,
-                  errorText: profile.fieldErrors['phone'],
-                  onChanged: (_) => profileController.clearFieldError('phone'),
-                  onSubmitted: (_) => unawaited(_save()),
-                  enabled: !profile.isSaving,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                AppButton(
-                  label: 'Save changes',
-                  isLoading: profile.isSaving,
-                  onPressed: () => unawaited(_save()),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const Divider(),
-          const SizedBox(height: AppSpacing.sm),
-          if (!_changingPassword)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: AppButton(
-                label: 'Change password',
-                icon: Icons.lock_outline,
-                variant: AppButtonVariant.text,
-                expand: false,
-                onPressed: () => setState(() => _changingPassword = true),
-              ),
-            )
-          else
-            Form(
-              key: _passwordKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
+          children: [
+            FadeSlideIn(
+              offset: const Offset(0, -12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Change password', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.md),
-                  if (password.failure != null) ...[
-                    MessageBanner(message: password.failure!.userMessage),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
-                  AppTextField(
-                    label: 'Current password',
-                    controller: _current,
-                    obscureText: true,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.password],
-                    validator: ProfileValidators.currentPassword,
-                    errorText: password.fieldErrors['currentPassword'],
-                    onChanged: (_) =>
-                        passwordController.clearFieldError('currentPassword'),
-                    enabled: !password.isSaving,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: 'New password',
-                    controller: _next,
-                    obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.newPassword],
-                    hintText: 'At least 8 characters, a letter and a number',
-                    validator: AuthValidators.newPassword,
-                    errorText: password.fieldErrors['newPassword'],
-                    onChanged: (_) =>
-                        passwordController.clearFieldError('newPassword'),
-                    onSubmitted: (_) => unawaited(_changePassword()),
-                    enabled: !password.isSaving,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppButton(
-                    label: 'Update password',
-                    isLoading: password.isSaving,
-                    onPressed: () => unawaited(_changePassword()),
-                  ),
-                  AppButton(
-                    label: 'Cancel',
-                    variant: AppButtonVariant.text,
-                    onPressed: password.isSaving
-                        ? null
-                        : () => setState(() {
-                            _changingPassword = false;
-                            _current.clear();
-                            _next.clear();
-                          }),
+                  const Eyebrow('Your account'),
+                  const SizedBox(height: 2),
+                  Semantics(
+                    container: true,
+                    header: true,
+                    child: Text(
+                      'Profile',
+                      style: theme.textTheme.headlineMedium,
+                    ),
                   ),
                 ],
               ),
             ),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(),
-          const SizedBox(height: AppSpacing.md),
-          AppButton(
-            label: 'Sign out',
-            icon: Icons.logout,
-            variant: AppButtonVariant.secondary,
-            onPressed: () => unawaited(_signOut()),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+            const SizedBox(height: AppSpacing.lg),
+            if (user != null)
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 60),
+                child: _Header(user: user),
+              ),
+            const SizedBox(height: AppSpacing.xl),
+            const _SectionTitle(
+              icon: Icons.badge_outlined,
+              title: 'Personal details',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md + 4),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (profile.failure != null) ...[
+                        MessageBanner(
+                          message: profile.failure!.userMessage,
+                          onRetry:
+                              profile.failure!.isRetryable && !profile.isSaving
+                              ? () => unawaited(_save())
+                              : null,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      AppTextField(
+                        label: 'Name',
+                        prefixIcon: Icons.person_outline_rounded,
+                        controller: _name,
+                        keyboardType: TextInputType.name,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.name],
+                        validator: AuthValidators.name,
+                        errorText: profile.fieldErrors['name'],
+                        onChanged: (_) =>
+                            profileController.clearFieldError('name'),
+                        enabled: !profile.isSaving,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        label: 'Email',
+                        prefixIcon: Icons.mail_outline_rounded,
+                        controller: _email,
+                        enabled: false,
+                        hintText: 'Your email cannot be changed',
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        label: 'Phone (optional)',
+                        prefixIcon: Icons.phone_outlined,
+                        controller: _phone,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.telephoneNumber],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'[0-9+()\-. ]'),
+                          ),
+                        ],
+                        validator: ProfileValidators.phone,
+                        errorText: profile.fieldErrors['phone'],
+                        onChanged: (_) =>
+                            profileController.clearFieldError('phone'),
+                        onSubmitted: (_) => unawaited(_save()),
+                        enabled: !profile.isSaving,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      AppButton(
+                        label: 'Save changes',
+                        isLoading: profile.isSaving,
+                        onPressed: () => unawaited(_save()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const _SectionTitle(icon: Icons.shield_outlined, title: 'Security'),
+            const SizedBox(height: AppSpacing.md),
+            AppCard(
+              padding: const EdgeInsets.all(AppSpacing.sm + 4),
+              key: _securityKey,
+              child: KeyedSubtree(
+                child: !_changingPassword
+                    ? Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: AppButton(
+                          label: 'Change password',
+                          icon: Icons.lock_outline,
+                          variant: AppButtonVariant.text,
+                          expand: false,
+                          onPressed: () => _openPasswordForm(),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xs + 4),
+                        child: Form(
+                          key: _passwordKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Change password',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              if (password.failure != null) ...[
+                                MessageBanner(
+                                  message: password.failure!.userMessage,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                              AppTextField(
+                                label: 'Current password',
+                                prefixIcon: Icons.lock_outline_rounded,
+                                controller: _current,
+                                obscureText: true,
+                                textInputAction: TextInputAction.next,
+                                autofillHints: const [AutofillHints.password],
+                                validator: ProfileValidators.currentPassword,
+                                errorText:
+                                    password.fieldErrors['currentPassword'],
+                                onChanged: (_) => passwordController
+                                    .clearFieldError('currentPassword'),
+                                enabled: !password.isSaving,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              AppTextField(
+                                label: 'New password',
+                                prefixIcon: Icons.key_rounded,
+                                controller: _next,
+                                obscureText: true,
+                                textInputAction: TextInputAction.done,
+                                autofillHints: const [
+                                  AutofillHints.newPassword,
+                                ],
+                                hintText: 'At least 8 characters, a letter and a number',
+                                validator: AuthValidators.newPassword,
+                                errorText: password.fieldErrors['newPassword'],
+                                onChanged: (_) => passwordController
+                                    .clearFieldError('newPassword'),
+                                onSubmitted: (_) =>
+                                    unawaited(_changePassword()),
+                                enabled: !password.isSaving,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              AppButton(
+                                label: 'Update password',
+                                isLoading: password.isSaving,
+                                onPressed: () => unawaited(_changePassword()),
+                              ),
+                              AppButton(
+                                label: 'Cancel',
+                                variant: AppButtonVariant.text,
+                                onPressed: password.isSaving
+                                    ? null
+                                    : () => setState(() {
+                                        _changingPassword = false;
+                                        _current.clear();
+                                        _next.clear();
+                                      }),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            AppButton(
+              label: 'Sign out',
+              icon: Icons.logout_rounded,
+              variant: AppButtonVariant.secondary,
+              onPressed: () => unawaited(_signOut()),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+/// A small heading with an icon, above a card of settings.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.gold),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Semantics(
+            container: true,
+            header: true,
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -301,36 +412,89 @@ class _Header extends StatelessWidget {
     final initial = user.name.trim().isEmpty
         ? '?'
         : user.name.trim().characters.first.toUpperCase();
-    return Row(
-      children: [
-        ExcludeSemantics(
-          child: CircleAvatar(
-            radius: 28,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              initial,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
+    // A membership card: the brand gradient, the user's monogram and details.
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.heroGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.lifted,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: CustomPaint(
+        painter: const RingsPainter(origin: Alignment(1.1, -1.2)),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg - 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(user.name, style: theme.textTheme.titleMedium),
-              Text(
-                user.email,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              Row(
+                children: [
+                  ExcludeSemantics(
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.goldGradient,
+                      ),
+                      child: Container(
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primaryDeep,
+                        ),
+                        child: Text(
+                          initial,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: AppColors.goldLight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.name,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          user.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const ExcludeSemantics(child: BrandTile(size: 22)),
+                  Text(
+                    'Member since ${DateFormat('MMMM y', 'en_US').format(user.createdAt.toLocal())}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.goldLight,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
