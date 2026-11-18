@@ -1,12 +1,13 @@
-# Root compose: runs the whole Servora stack together.
-#   - db   PostgreSQL            (host port 5433)
-#   - api  Node.js REST API      (http://localhost:3000, docs at /docs)
-#   - web  Flutter web app/nginx (http://localhost:8080)
-#
-#   cp backend/.env.example backend/.env     # once
-#   docker compose up -d --build --wait
-#
-# Each part also starts on its own from its folder: backend/ and frontend/.
-include:
-  - backend/docker-compose.yml
-  - frontend/docker-compose.yml
+# Servora web app on its own (nginx serving the Flutter web build).
+# Run from this folder:  docker compose up --build
+# It needs the API to be running too (see ../backend or the root docker-compose.yml).
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Where the user's *browser* finds the API. Rebuild the image after changing it.
+        API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - '${WEB_HOST_PORT:-8080}:80'

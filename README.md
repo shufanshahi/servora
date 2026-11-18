@@ -1,131 +1,256 @@
-# Servora
+# Servora app
 
-Service booking and management: customers browse services, book appointments,
-manage their bookings, and ask an AI assistant for help.
+The Flutter client for Servora (Android application id `com.servora.app`).
 
-- **Backend**: Node.js 22, Express 5, TypeScript, PostgreSQL 17
-- **Frontend**: Flutter (Android app, plus a web build served by nginx in Docker)
+Built with Flutter, Riverpod (state), go_router (navigation) and dio (HTTP). Screens depend
+on providers, providers on repositories, and repositories on one API client.
 
-## Contents
+## Prerequisites
 
-| Path | What it is |
-|---|---|
-| [`backend/`](backend) | REST API. Docs: [backend/README.md](backend/README.md) |
-| [`frontend/`](frontend) | Flutter app. Docs: [frontend/README.md](frontend/README.md) |
-| [`docs/DATABASE.md`](docs/DATABASE.md) | Database schema, ER diagram, migrations and setup |
-| [`docs/API.md`](docs/API.md) | Every endpoint with parameters and example responses |
-| [`backend/docs/openapi.yaml`](backend/docs/openapi.yaml) | Machine-readable OpenAPI 3 spec (also served at `/docs`) |
-| [`apk/servora.apk`](apk) | Ready-to-install Android APK for testing |
-| [`docker-compose.yml`](docker-compose.yml) | Starts the whole stack together |
+- Flutter 3.50 or newer (`flutter --version`)
+- Android SDK with an emulator or a physical Android device (`flutter doctor`)
+- The backend running (see [../backend/README.md](../backend/README.md) or run
+  `docker compose up --build` from the repository root)
 
-## Quick start (Docker)
-
-Prerequisites: Docker with Docker Compose v2.20 or newer (the root compose file uses `include`).
-
-```bash
-cp backend/.env.example backend/.env          # once: the API needs a JWT_SECRET
-docker compose up -d --build --wait           # PostgreSQL + API + web app; migrations are applied
-docker compose exec api npm run seed:prod     # once: service catalogue and the demo user
-```
-
-| What | URL |
-|---|---|
-| Web app | http://localhost:8080 |
-| API | http://localhost:3000 (try `/health` and `/services`) |
-| Interactive API docs | http://localhost:3000/docs |
-| PostgreSQL | `localhost:5433` (user, password and database: `servora`) |
-
-Sign in with the demo account `demo@servora.test` / `Demo1234`, or register a new one.
-
-```bash
-docker compose logs -f api     # follow logs
-docker compose down            # stop (add -v to also delete the database volume)
-```
-
-### Run one part on its own
-
-Each part has its own Dockerfile and compose file:
-
-| Part | Command | Starts |
-|---|---|---|
-| Backend | `cd backend && docker compose up -d --build --wait` | PostgreSQL and the API (`:3000`) |
-| Frontend | `cd frontend && docker compose up -d --build` | The web app (`:8080`), which needs an API to talk to |
-| Everything | `docker compose up -d --build --wait` (repo root) | All of the above |
-
-The root `docker-compose.yml` only `include`s the two compose files, so each service is defined
-once and nothing can drift out of sync.
-
-## Install the Android app (APK)
-
-[`apk/servora.apk`](apk/servora.apk) is a release build of the app (package `com.servora.app`).
-SHA-256 is in [`apk/servora.apk.sha256`](apk/servora.apk.sha256).
-
-1. Start the backend (Quick start above).
-2. Install the APK:
-   - **Emulator**: `adb install -r apk/servora.apk`, or drag the file onto the emulator window.
-   - **Phone**: copy the file to the phone, open it and allow installing from this source.
-3. Open **Servora** and sign in with `demo@servora.test` / `Demo1234`.
-
-**Which API does the APK talk to?** The address is fixed when the app is built. This APK uses
-`http://10.0.2.2:3000`, the address the Android *emulator* uses to reach the computer running
-the backend. So it works out of the box on an emulator with the backend on port 3000.
-
-A physical phone cannot reach `10.0.2.2`. To test on a phone, rebuild the APK pointing at your
-computer's LAN address (phone and computer on the same Wi-Fi) or at a hosted backend:
-
-```bash
-cd frontend
-flutter build apk --release --dart-define=API_BASE_URL=http://192.168.1.20:3000
-# -> frontend/build/app/outputs/flutter-apk/app-release.apk
-```
-
-The release build allows plain `http://` so that local testing works. For a real deployment,
-host the API behind HTTPS and remove `android:usesCleartextTraffic` from
-[`AndroidManifest.xml`](frontend/android/app/src/main/AndroidManifest.xml). The APK is signed
-with the debug key, which is fine for testing but not for store distribution.
-
-## Run without Docker
-
-Backend (needs Node.js 22+ and a PostgreSQL, which `docker compose up -d --wait db` provides):
-
-```bash
-cd backend
-cp .env.example .env
-npm ci
-docker compose up -d --wait db
-npm run migrate
-npm run seed
-npm run dev          # http://localhost:3000
-```
-
-Frontend (needs the Flutter SDK, version 3.50 or newer):
+## Setup and run
 
 ```bash
 cd frontend
 flutter pub get
-flutter run          # emulator; see frontend/README.md for other targets
+flutter run                      # uses the emulator-friendly default API URL
 ```
 
-## Configuration
+## Pointing the app at the API
 
-The API reads its settings from environment variables. Docker Compose reads them from
-`backend/.env`; every variable is documented in
-[backend/README.md](backend/README.md#configuration).
+The API address is a build-time setting, passed with `--dart-define`. It is **not** a secret;
+anything compiled into an app can be extracted, so never put keys here. (The AI provider key
+lives only on the backend.)
 
-| Variable | Notes |
+| Where the app runs | `API_BASE_URL` | How |
+|---|---|---|
+| Android emulator | `http://10.0.2.2:3000` (the default) | `flutter run` |
+| Physical device on the same Wi-Fi | `http://<your-computer-LAN-IP>:3000` | `flutter run --dart-define=API_BASE_URL=http://192.168.1.20:3000` |
+| Hosted backend | `https://<your-host>` | `flutter build apk --release --dart-define=API_BASE_URL=https://<your-host>` |
+
+Why `10.0.2.2`: inside the Android emulator, `localhost` is the emulator itself. Android maps
+the special address `10.0.2.2` to your computer, where the backend listens on port 3000.
+
+For a physical device, find your computer's LAN address (for example `hostname -I`) and make
+sure the phone is on the same network and no firewall blocks port 3000.
+
+### Check the API is reachable first
+
+A tiny script uses the app's own HTTP client to call `/health`, so you can test an address
+before running the app:
+
+```bash
+dart run tool/check_api.dart                          # default: http://10.0.2.2:3000
+dart run tool/check_api.dart http://192.168.1.20:3000
+```
+
+(`10.0.2.2` only resolves inside the Android emulator, so on your computer use `localhost`
+or the LAN address.)
+
+## How sign-in works
+
+- **One source of truth.** `core/session/` owns who is signed in (`SessionNotifier`: unknown,
+  authenticated, or unauthenticated). The router redirect and the API client both read it, so
+  they can never disagree.
+- **Persistent session.** After login or registration the token, its expiry and the user are saved
+  with `flutter_secure_storage` (Android Keystore-backed), never in plain preferences. On launch the
+  app reads them, shows a splash screen briefly, then goes straight to Home, or to the sign-in
+  screen if nothing valid is saved.
+- **Checked with the server.** A saved session opens straight to Home, then the app asks
+  `GET /users/me` whether the token is still good. A 401 (expired, tampered, or the account was
+  deleted) clears the stored token and returns to sign-in; being offline or a server error keeps
+  you signed in, because they say nothing about the token. The call also refreshes the saved
+  copy of your details.
+- **Expiry.** A saved token that has expired is deleted on launch and the sign-in screen explains
+  "Your session has expired". If the server rejects a token that a request carried (HTTP 401) the
+  session is cleared and the user is returned to sign-in with the same message. A *failed login*
+  (wrong password) never signs anyone out: it carries no token.
+- **Logout** removes the token and cached user from the device and replaces the navigation stack,
+  so Back cannot return to a signed-in screen.
+- **Forms** validate with the same rules and wording as the API (`AuthValidators`), show server
+  messages on the right field (for example "An account with this email already exists" under
+  Email), block double submits, and keep what was typed when a request fails or the device is
+  offline.
+- **No refresh token** (see the trade-off in [../backend/README.md](../backend/README.md)): a token
+  lasts 7 days, and the user simply signs in again after that.
+
+## Browsing services
+
+- **Home tab.** A search box, category chips, a highlighted **Featured** row and the full list.
+  Typing in the search box waits for a short pause (about 350 ms) before asking the API, so fast
+  typing sends one request, not one per letter. Choosing a category applies at once; choosing it
+  again clears it. The Featured row is hidden while a search or category is active.
+- **The filter survives tab switches and the detail screen.** It lives in a provider, not in the
+  screen, so coming back to Home shows the same search, category, results and scroll position.
+- **While a new search loads**, the previous results stay on screen under a thin progress bar
+  instead of flashing empty. If an older request finishes after a newer one, its result is ignored.
+- **Loading, empty and error states.** Grey card-shaped placeholders on the first load; "No
+  services found" with a **Clear filters** button when nothing matches; a readable message with
+  **Try again** when a request fails. A failing Featured row never hides the list, and the other
+  way round. Pull down to refresh everything. Longer lists load the next page when you scroll
+  near the end.
+- **Pictures** are kept on disk by `cached_network_image`. Each picture has a fixed 4:3 (or
+  square) box, so nothing moves while it loads, and a neutral placeholder takes its place if the
+  service has no picture or it fails to load.
+- **Layout.** One column on phones, two or three on tablets and wide screens; verified with
+  text enlarged to 3x on a 320 dp screen.
+- **Service detail.** Tapping a service opens its page at once from the list copy, then quietly
+  refreshes it from the API. A **Book this service** bar stays on screen while the page scrolls.
+  If the service has been removed since, the page says so instead of letting you book it.
+
+### Screenshots
+
+Captured from the app running on an Android emulator against the real API with the seeded
+catalogue.
+
+| Home | Search | Category | Service detail |
+|---|---|---|---|
+| ![Home with search, categories and featured services](docs/screenshots/home.jpg) | ![Searching for "massage"](docs/screenshots/search.jpg) | ![Filtered to the Beauty category](docs/screenshots/category.jpg) | ![A service's detail page with the Book button](docs/screenshots/detail.jpg) |
+
+The photographs are used under their original licences; see
+[../backend/public/images/services/ATTRIBUTION.md](../backend/public/images/services/ATTRIBUTION.md).
+
+### Pictures and the Android emulator
+
+The API reports each picture as an absolute URL built from **its** `PUBLIC_BASE_URL`. That address
+must be reachable from the device, and inside the emulator `localhost` is the emulator itself. So
+when you run the API for the emulator, start it with the emulator's alias for your computer:
+
+```bash
+PUBLIC_BASE_URL=http://10.0.2.2:3000 docker compose up -d --wait     # from the repository root
+```
+
+For a physical phone use your computer's LAN address instead (for example
+`http://192.168.1.20:3000`); for a hosted API use its public `https://` address. If pictures show
+the placeholder icon while the data loads fine, this is almost always the cause.
+
+## Booking and My Bookings
+
+- **Booking screen.** *Book this service* opens a date button (the calendar only allows today
+  up to 30 days ahead, the API's booking window) and a grid of times. Times that are taken,
+  too soon or past are shown greyed out and cannot be tapped; changing the date clears the
+  chosen time. A summary and an optional note come before **Confirm booking**.
+- **Taken meanwhile.** If someone else books the time first, the app says so, clears your
+  choice, reloads the grid (the time is now greyed out) and keeps you on the same screen.
+  Tapping Confirm repeatedly sends one request.
+- **Confirmation.** After a successful booking the app shows service, date, time, price and a
+  **Pending** badge, with buttons to My Bookings and Home. A pending booking becomes
+  **Confirmed** automatically after a couple of minutes.
+- **My Bookings.** *Upcoming* and *Previous* tabs with a status badge per booking (Pending,
+  Confirmed, Completed, Cancelled; each has its own colour, icon and label), pull to refresh,
+  and empty and error states. Tapping a booking opens its details.
+- **Cancel.** Only pending bookings offer **Cancel booking**, behind a confirmation. If the
+  booking was confirmed in the meantime the app explains that it can no longer be cancelled
+  and shows the real status.
+- **Time zones.** Time labels in the grid come from the API in the business time zone (UTC by
+  default) and the screen says which. My Bookings, the confirmation and the details use the
+  phone's own time zone and say so; when the two differ the summary shows both ("10:00 UTC,
+  your time 4:00 PM").
+
+| Choosing a time | Confirmation | My Bookings | Previous (cancelled) | Cancel |
+|---|---|---|---|---|
+| ![Booking screen with a time chosen and the summary](docs/screenshots/booking.jpg) | ![Booking confirmation with a Pending badge](docs/screenshots/confirmation.jpg) | ![Upcoming bookings with Confirmed and Pending badges](docs/screenshots/my-bookings.jpg) | ![Previous bookings with Cancelled badges](docs/screenshots/my-bookings-previous.jpg) | ![Cancel confirmation dialog](docs/screenshots/cancel-dialog.jpg) |
+
+Verified on an Android emulator against the real API with two accounts: a time booked by one
+account was greyed out for the other, a pending booking turned Confirmed after the delay, and
+cancelling released the time.
+
+## Profile
+
+The Profile tab shows your name and email and lets you edit your name and optional phone number.
+
+- **Edit and save.** Name and phone are validated as you type with the API's own rules (a name is
+  required, a phone has 6 to 15 digits and only digits and `+ ( ) - .` can be typed). Saving shows
+  "Profile updated" and the new name appears everywhere it is displayed, because the session's
+  copy of the user is updated, and it survives a restart because the saved session is rewritten.
+  The email is shown but cannot be changed.
+- **When saving fails** the app shows why (offline, server error, or a message under the field) and
+  keeps what you typed, with a **Try again** button.
+- **Latest details.** Opening the tab quietly refreshes your details from the server without
+  overwriting anything you are in the middle of editing.
+- **Change password** is an optional form below the details: current password and a new one with
+  the same rules as registration. A wrong current password is explained under that field and does
+  **not** sign you out.
+- **Sign out** asks for confirmation, then clears the token and the saved user.
+
+| Profile | Wrong current password |
 |---|---|
-| `JWT_SECRET` | **Required.** Signs login tokens. The placeholder in `.env.example` is fine locally and is refused when `NODE_ENV=production`. Generate a real one with `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
-| `CORS_ORIGINS` | Browser origins allowed to call the API. Includes the web app (`http://localhost:8080`) by default. The mobile app is not subject to CORS |
-| `AI_API_KEY` | Optional. Enables the AI assistant. Without it `POST /ai/chat` answers `503 AI_UNAVAILABLE` and the rest of the app works normally |
-| `API_HOST_PORT`, `DB_HOST_PORT`, `WEB_HOST_PORT` | Change the published ports (3000, 5433, 8080) |
-| `API_BASE_URL` | Frontend build setting: where the app finds the API. Docker web build default `http://localhost:3000`; the Android build default `http://10.0.2.2:3000`. Rebuild after changing it |
+| ![Profile with editable name and phone](docs/screenshots/profile.jpg) | ![Change password form with a wrong current password message](docs/screenshots/profile-password-error.jpg) |
 
-Nothing secret is stored in the repository. Docker uses safe local defaults; real deployments
-must set their own database credentials and secrets.
+Verified on an Android emulator against the real API: an edited name and phone appeared on the
+profile screen at once, were still there after force-stopping and relaunching the app, and matched
+what the server returns.
 
-## Documentation index
+## Run the web build in Docker
 
-- Database: [docs/DATABASE.md](docs/DATABASE.md)
-- API: [docs/API.md](docs/API.md) and [live docs at /docs](http://localhost:3000/docs)
-- Backend details (auth, tests, AI assistant, layout): [backend/README.md](backend/README.md)
-- App details (screens, sign-in, tests, APK build): [frontend/README.md](frontend/README.md)
+The same Flutter code also builds for the browser. The [`Dockerfile`](Dockerfile) installs the
+Flutter SDK, runs `flutter build web` and serves the result with nginx.
+
+```bash
+cd frontend
+docker compose up -d --build        # http://localhost:8080
+docker compose down
+```
+
+The app needs the API, so start the backend too (`cd ../backend && docker compose up -d --wait`),
+or run everything from the repository root. The API address is compiled in, and it is the one
+the *browser* uses:
+
+```bash
+API_BASE_URL=http://localhost:3000 docker compose up -d --build   # the default
+```
+
+Rebuild the image after changing it. The backend must allow the web origin in `CORS_ORIGINS`
+(`http://localhost:8080` is allowed by default). Use `WEB_HOST_PORT` to change the port.
+
+## Tests and checks
+
+```bash
+flutter analyze
+flutter test
+```
+
+## Build the APK
+
+With the Android SDK installed:
+
+```bash
+flutter build apk --release --dart-define=API_BASE_URL=https://<your-host>
+# -> build/app/outputs/flutter-apk/app-release.apk
+```
+
+A ready-made build for the emulator is committed at [`../apk/servora.apk`](../apk). The release
+manifest declares the `INTERNET` permission and allows plain `http://` so a local backend works;
+use HTTPS for a real deployment and remove `android:usesCleartextTraffic`.
+
+The first build downloads Gradle and the Android dependencies and can take a long time; later
+builds are much faster. Install the APK on a device or emulator with
+`adb install -r build/app/outputs/flutter-apk/app-release.apk`.
+
+## Project layout
+
+```
+lib/
+  main.dart  app.dart
+  core/
+    config/    AppConfig (API_BASE_URL)
+    network/   dio client, envelope parsing, failure mapping
+    session/   who is signed in: session state, secure token store
+    format/    price and duration formatting
+    error/     AppFailure: the one error type the UI sees
+    router/    go_router, bottom-navigation shell, auth redirect
+    theme/     colours, spacing, ThemeData
+    layout/    responsive helpers
+    widgets/   shared buttons, fields, cards, status badge, loading/empty/error views
+  features/    one folder per feature: data/ domain/ presentation/
+    auth/      login and registration
+    services/  Home (search, chips, featured, list) and the service detail screen
+    booking/   booking screen, confirmation, My Bookings, booking detail and cancel
+    profile/   profile screen (edit name and phone, change password, sign out)
+test/
+tool/          small developer scripts
+```
