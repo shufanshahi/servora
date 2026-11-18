@@ -30,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   final _scroll = ScrollController();
   late final TextEditingController _search;
+  final _searchFocus = FocusNode();
 
   @override
   void initState() {
@@ -47,6 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ..removeListener(_maybeLoadMore)
       ..dispose();
     _search.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -82,6 +84,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Another screen (the assistant) asked for the search box. Wait a frame so this tab
+    // is on screen before it takes focus.
+    ref.listen<int>(searchFocusRequestProvider, (_, _) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchFocus.requestFocus();
+      });
+    });
     final filter = ref.watch(serviceFilterProvider);
     final list = ref.watch(serviceListProvider);
     final theme = Theme.of(context);
@@ -109,6 +118,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: AppSpacing.md),
                   ServiceSearchField(
                     controller: _search,
+                    focusNode: _searchFocus,
                     onChanged: filterNotifier.queryChanged,
                     onSubmitted: filterNotifier.submitQuery,
                     onClear: () {

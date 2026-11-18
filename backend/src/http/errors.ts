@@ -17,6 +17,7 @@ export const ERROR_CODES = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   SLOT_UNAVAILABLE: 'SLOT_UNAVAILABLE',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
+  AI_UNAVAILABLE: 'AI_UNAVAILABLE',
 } as const;
 
 export interface FieldError {
@@ -69,3 +70,11 @@ export const emailTaken = (): AppError =>
  */
 export const invalidCredentials = (): AppError =>
   new AppError(401, ERROR_CODES.INVALID_CREDENTIALS, 'Incorrect email or password');
+
+/** The AI assistant cannot answer right now (503). Never carries provider details. */
+export const aiUnavailable = (): AppError =>
+  new AppError(
+    503,
+    ERROR_CODES.AI_UNAVAILABLE,
+    'The assistant is unavailable right now. Please try again in a moment.',
+  );

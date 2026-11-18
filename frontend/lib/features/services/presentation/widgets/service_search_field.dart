@@ -8,6 +8,7 @@ class ServiceSearchField extends StatelessWidget {
     required this.onChanged,
     required this.onSubmitted,
     required this.onClear,
+    this.focusNode,
     super.key,
   });
 
@@ -15,11 +16,13 @@ class ServiceSearchField extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onClear;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       textInputAction: TextInputAction.search,

@@ -21,6 +21,8 @@ tags:
     description: The public service catalogue. No token needed.
   - name: Appointments
     description: Booking a service and managing your own bookings. A token is required.
+  - name: Assistant
+    description: Catalogue-grounded AI chat. A token is required; limited per user.
 
 paths:
   /health:
@@ -600,6 +602,62 @@ paths:
                   code: INVALID_STATUS_TRANSITION
                   message: A confirmed appointment cannot be cancelled; only pending ones can
 
+  /ai/chat:
+    post:
+      tags: [Assistant]
+      summary: Ask the service assistant
+      description: |
+        Sends a message (and optional recent history) to the AI assistant, which answers
+        from the live catalogue of active services and politely declines unrelated requests.
+        History accepts only `user` and `assistant` roles; only the most recent
+        `AI_MAX_HISTORY_MESSAGES` are used. Limited per user (`AI_RATE_LIMIT_MAX` per
+        `AI_RATE_LIMIT_WINDOW_SECONDS`). The provider key lives only on the server.
+        If the AI is disabled, times out or fails, the answer is a generic `503 AI_UNAVAILABLE`.
+      operationId: chatWithAssistant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            example:
+              message: Something relaxing that takes about an hour?
+              history:
+                - role: user
+                  content: What do you offer?
+                - role: assistant
+                  content: We offer wellness, beauty and tech support services.
+      responses:
+        '200':
+          description: The assistant's reply.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              example:
+                success: true
+                data:
+                  reply: Try the Swedish Massage, $65.00 for 60 minutes.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: The assistant is disabled, timed out or failed (`AI_UNAVAILABLE`). Generic message, no provider details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: AI_UNAVAILABLE
+                  message: The assistant is unavailable right now. Please try again in a moment.
+
 components:
   securitySchemes:
     bearerAuth:
@@ -611,6 +669,38 @@ components:
         or expired tokens get `401 UNAUTHENTICATED`.
 
   schemas:
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          description: Trimmed; at most `AI_MAX_MESSAGE_CHARS` (default 1000) characters.
+        history:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+    ChatResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [reply]
+          properties:
+            reply: { type: string }
     RegisterRequest:
       type: object
       required: [name, email, password]
@@ -879,7 +969,7 @@ components:
                 - field: password
                   message: Password must contain a number
     RateLimited:
-      description: Too many register/login attempts from this IP (`RATE_LIMITED`).
+      description: Too many requests (`RATE_LIMITED`), either register/login attempts per IP or AI chat requests per user.
       headers:
         Retry-After:
           description: Seconds to wait before trying again.

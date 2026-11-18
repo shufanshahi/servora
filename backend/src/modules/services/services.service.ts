@@ -38,6 +38,11 @@ export class ServicesService {
     };
   }
 
+  /** All active services, unpaginated (used to ground the AI assistant). */
+  async listActive(): Promise<PublicService[]> {
+    return (await this.repository.listActive()).map((record) => this.toPublic(record));
+  }
+
   async get(id: string): Promise<PublicService> {
     // A malformed id can never match a row, so answer 404 without asking the database
     // (which would otherwise raise an invalid-uuid error and become a 500).

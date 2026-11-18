@@ -4,6 +4,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { Config } from '../config';
 import type { Db } from '../db/pool';
+import type { AiProvider } from '../modules/ai/ai.provider';
 import { mountDocs } from './docs';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { requestLogger, type LogSink } from './middleware/request-logger';
@@ -18,6 +19,8 @@ export interface AppDeps {
   extraRoutes?: (app: Express) => void;
   /** Source of "now" for booking rules. Defaults to the system clock; tests inject a fixed one. */
   clock?: () => Date;
+  /** AI provider override. Defaults to Gemini when AI_API_KEY is set. Tests inject a fake. */
+  aiProvider?: AiProvider;
 }
 
 const JSON_BODY_LIMIT = '100kb';
@@ -61,7 +64,14 @@ export function createApp(deps: AppDeps): Express {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
   mountDocs(app, config);
-  app.use(createRoutes({ config, db: deps.db, ...(deps.clock ? { clock: deps.clock } : {}) }));
+  app.use(
+    createRoutes({
+      config,
+      db: deps.db,
+      ...(deps.clock ? { clock: deps.clock } : {}),
+      ...(deps.aiProvider ? { aiProvider: deps.aiProvider } : {}),
+    }),
+  );
   deps.extraRoutes?.(app);
 
   app.use(notFoundHandler);

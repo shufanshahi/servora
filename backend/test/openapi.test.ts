@@ -102,6 +102,17 @@ describe('docs/openapi.yaml', () => {
     }
   });
 
+  it('documents the AI chat endpoint behind a token', async () => {
+    const api = await SwaggerParser.dereference(specPath);
+    const op = (api.paths as unknown as Record<string, Record<string, unknown>>)['/ai/chat']?.[
+      'post'
+    ] as { responses: Record<string, unknown>; security?: unknown[] };
+    expect(Object.keys(op.responses)).toEqual(
+      expect.arrayContaining(['200', '401', '422', '429', '503']),
+    );
+    expect(op.security).toEqual([{ bearerAuth: [] }]);
+  });
+
   it('only mentions error codes that really exist', () => {
     const text = readFileSync(specPath, 'utf8');
     const used = new Set([...text.matchAll(/code: ([A-Z_]+)\b/g)].map((m) => m[1]));

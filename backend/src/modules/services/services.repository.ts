@@ -51,6 +51,15 @@ export class ServicesRepository {
     return { items: rows.rows.map(toRecord), total: total.rows[0]?.total ?? 0 };
   }
 
+  /** Every active service (the catalogue is small), ordered for stable output. */
+  async listActive(): Promise<ServiceRecord[]> {
+    const result = await this.db.query<ServiceRow>(
+      `SELECT id, name, description, category, price_cents, duration_minutes, image_path, is_featured
+       FROM services WHERE is_active = true ORDER BY category, name`,
+    );
+    return result.rows.map(toRecord);
+  }
+
   /** An active service by id, or null (inactive services are treated as missing). */
   async findActiveById(id: string): Promise<ServiceRecord | null> {
     const result = await this.db.query<ServiceRow>(

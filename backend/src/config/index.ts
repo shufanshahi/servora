@@ -44,6 +44,23 @@ const schema = z.object({
   // rate limiting sees the real client IP instead of the proxy's.
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 
+  // AI assistant. The key lives only here (never in the app). Without it the feature is
+  // disabled and POST /ai/chat answers 503 AI_UNAVAILABLE; the rest of the API is unaffected.
+  AI_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  AI_MODEL: z.string().min(1).default('gemini-flash-latest'),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(15_000),
+  AI_MAX_MESSAGE_CHARS: z.coerce.number().int().min(1).max(10_000).default(1000),
+  AI_MAX_HISTORY_MESSAGES: z.coerce.number().int().min(0).max(50).default(10),
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
+  AI_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(10 * 60),
+
   // Booking rules. All times are wall-clock times in BUSINESS_TZ.
   BUSINESS_TZ: z
     .string()

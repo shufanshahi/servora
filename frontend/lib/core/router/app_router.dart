@@ -5,6 +5,7 @@ import 'package:servora/core/router/app_shell.dart';
 import 'package:servora/core/router/auth_status.dart';
 import 'package:servora/core/router/placeholder_pages.dart';
 import 'package:servora/core/router/routes.dart';
+import 'package:servora/features/assistant/presentation/assistant_screen.dart';
 import 'package:servora/features/auth/presentation/login_screen.dart';
 import 'package:servora/features/auth/presentation/register_screen.dart';
 import 'package:servora/features/booking/domain/appointment.dart';
@@ -110,7 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.assistant,
-                builder: (_, _) => const AssistantPlaceholderPage(),
+                builder: (_, _) => const AssistantScreen(),
               ),
             ],
           ),

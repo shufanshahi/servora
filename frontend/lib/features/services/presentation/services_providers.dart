@@ -60,6 +60,19 @@ final serviceFilterProvider =
       ServiceFilterNotifier.new,
     );
 
+/// Asks the Home search box to take focus (for example from the assistant's "Browse
+/// services" shortcut). Each call changes the value, so every request is noticed.
+class SearchFocusRequest extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state++;
+}
+
+final searchFocusRequestProvider = NotifierProvider<SearchFocusRequest, int>(
+  SearchFocusRequest.new,
+);
+
 /// The services loaded so far for the current filter.
 class ServiceListState {
   const ServiceListState({
